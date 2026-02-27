@@ -35,7 +35,7 @@ MODULE W3SRC4MD
   !/                  +-----------------------------------+
   !/
   !/    30-Aug-2010 : Origination.                        ( version 3.14-Ifremer )
-  !/    02-Nov-2010 : Addding fudge factor for low freq.  ( version 4.03 )
+  !/    02-Nov-2010 : Adding fudge factor for low freq.  ( version 4.03 )
   !/    02-Sep-2011 : Clean up and time optimization      ( version 4.04 )
   !/    04-Sep-2011 : Estimation of whitecap stats.       ( version 4.04 )
   !/    13-Nov-2013 : Reduced frequency range with IG     ( version 4.13 )
@@ -157,7 +157,7 @@ CONTAINS
     !/                  +-----------------------------------+
     !/
     !/    03-Oct-2007 : Origination.                        ( version 3.13 )
-    !/    13-Jun-2011 : Adds f_m0,-1 as FMEAN in the outout ( version 4.04 )
+    !/    13-Jun-2011 : Adds f_m0,-1 as FMEAN in the output ( version 4.04 )
     !/    08-Jun-2018 : use STRACE and FLUSH                ( version 6.04 )
     !/    22-Feb-2020 : Merge Romero (2019) and cleanup     ( version 7.06 )
     !/    22-Jun-2021 : Add FLX5 to use stresses with the ST( version 7.14 )
@@ -461,7 +461,7 @@ CONTAINS
     !       DRAT    Real  I   Air/water density ratio.
     !       AS      Real  I   Air-sea temperature difference
     !       USDIR   Real  I   wind stress direction
-    !       Z0      Real  I   Air-side roughness lengh.
+    !       Z0      Real  I   Air-side roughness length.
     !       CD      Real  I   Wind drag coefficient.
     !       USDIR   Real  I   Direction of friction velocity
     !       TAUWX-Y Real  I   Components of the wave-supported stress.
@@ -677,7 +677,7 @@ CONTAINS
 #ifdef W3_T
     WRITE (NDST,9003) AS, Usigma, USTARsigma, U
 #endif
-    UST=USTAR
+    UST=MAX(USTAR,0.0001)
     ISTAB=3
 #ifdef W3_STAB3
     DO ISTAB=1,2
@@ -741,7 +741,7 @@ CONTAINS
             IF (ZLOG.LT.0.) THEN
               ! The source term Sp is beta * omega * X**2
               ! as given by Janssen 1991 eq. 19
-              ! Note that this is slightly diffent from ECWAM code CY45R2 where ZLOG is replaced by ??
+              ! Note that this is slightly different from ECWAM code CY45R2 where ZLOG is replaced by ??
               DSTAB(ISTAB,IS) = CONST*EXP(ZLOG)*ZLOG**4*UCN*UCN*COSWIND**SSINTHP
 
               ! Below is an example with breaking probability feeding back to the input...
@@ -777,6 +777,7 @@ CONTAINS
           ! Wave direction is "direction to"
           ! therefore there is a PLUS sign for the stress
           TEMP2=CONST2*DSTAB(ISTAB,IS)*A(IS)
+          IF (ISNAN(TEMP2)) TEMP2=0.
           IF (DSTAB(ISTAB,IS).LT.0) THEN
             STRESSSTABN(ISTAB,1)=STRESSSTABN(ISTAB,1)+TEMP2*ECOS(IS)
             STRESSSTABN(ISTAB,2)=STRESSSTABN(ISTAB,2)+TEMP2*ESIN(IS)
@@ -831,6 +832,7 @@ CONTAINS
       IS=ITH+(NK-1)*NTH
       COSWIND=(ECOS(IS)*COSU+ESIN(IS)*SINU)
       TEMP=TEMP+A(IS)*(MAX(COSWIND,0.))**3
+      IF (ISNAN(TEMP)) TEMP = 0.
     END DO
 
     TAUPX=TAUX-ABS(TTAUWSHELTER)*XSTRESS
@@ -1086,7 +1088,7 @@ CONTAINS
             DIFF2=0.
             IF(SIG(IK)<SIGTAB(IKL,ID) .AND. SIG(IK+1)>=SIGTAB(IKL,ID)) THEN
               DIFF1=SIGTAB(IKL,ID)-SIG(IK)   ! seeks the indices of the upper boundary
-              DIFF2=SIG(IK+1)-SIGTAB(IKL,ID)! the indices of lower boudary = IK
+              DIFF2=SIG(IK+1)-SIGTAB(IKL,ID)! the indices of lower boundary = IK
               IF (DIFF1<DIFF2) THEN
                 IKTAB(IKL,ID)=IK
               ELSE
@@ -1195,7 +1197,7 @@ CONTAINS
     !/    23-Jun-2006 : Origination.                        ( version 3.13 )
     !/     adapted from WAM, original:P.A.E.M. JANSSEN    KNMI AUGUST 1990
     !/     adapted version (subr. STRESS): J. BIDLOT    ECMWF OCTOBER 2004
-    !/     Table values were checkes against the original f90 result and found to
+    !/     Table values were checks against the original f90 result and found to
     !/     be identical (at least at 0.001 m/s accuracy)
     !/
     !  1. Purpose :
@@ -1678,7 +1680,7 @@ CONTAINS
               ! Power of Y in denominator should be FACHFE-4
               TAUHFT2(K,L,I)  = TAUHFT2(K,L,I)+W(J)*ZBETA*(UST/UST0)**2/Y*DELY
               TAUW=TAUW-W(J)*UST**2*ZBETA*LEVTAIL/Y*DELY
-              UST=SQRT(MAX(TAUW,0.))
+              UST=SQRT(MAX(TAUW,0.0001))
             END DO
 #ifdef W3_T
             WRITE (NDST,9000) K,L,I,UST0,AALPHA+FLOAT(L)*DELALP,LEVTAIL,TAUHFT2(K,L,I)
@@ -1811,6 +1813,7 @@ CONTAINS
     DELI1   = MIN(1.,XI - REAL(IND))  !interpolation coefficient for stress table
     DELI2   = 1. - DELI1
     XJ      = WINDSPEED/DELU
+    !XJ      = MIN ( 200., ABS(XJ) )
     J       = MIN ( JUMAX-1, INT(XJ) )
     DELJ1   = MIN(1.,XJ - REAL(J))
     DELJ2   = 1. - DELJ1
@@ -2567,7 +2570,7 @@ CONTAINS
         DT   = TMAX / 50
         MFT  = 0.
         DO IT = 1, 50
-          ! integration over time of foam persistance
+          ! integration over time of foam persistence
           T = FLOAT(IT) * DT
           ! Eq. 5 and 6 of Reul and Chapron, 2003
           IF ( T .LT. TSTR ) THEN

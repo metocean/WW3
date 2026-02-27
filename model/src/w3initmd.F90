@@ -55,7 +55,7 @@ MODULE W3INITMD
   !/                  Reset UST initialization.
   !/    03-Sep-2012 : Switch test file on/off (TSTOUT)    ( version 4.10 )
   !/    03-Sep-2012 : Clean up of UG grids                ( version 4.08 )
-  !/    30-Sep-2012 : Implemetation of tidal constituents ( version 4.09 )
+  !/    30-Sep-2012 : Implementation of tidal constituents ( version 4.09 )
   !/    07-Dec-2012 : Initialize UST non-zero.            ( version 4.11 )
   !/    12-Dec-2012 : Changes for SMC grid.  JG_Li        ( version 4.11 )
   !/    26-Dec-2012 : Modify field output MPI for new     ( version 4.11 )
@@ -314,7 +314,7 @@ CONTAINS
     !       water level and ice coverage are re-evaluated at the 0th
     !       time step in the actual wave model routine.
     !     - When running regtests in cases where disk is non-local
-    !       (i.e. NFS used), there can be a huge improvment in compute
+    !       (i.e. NFS used), there can be a huge improvement in compute
     !       time by using /var/tmp/ for log files.
     !       See commented line at "OPEN (MDS(1),FILE=..."
     !
@@ -639,23 +639,23 @@ CONTAINS
     IF (FSTOTALIMP .and. .NOT. LPDLIB) THEN
       WRITE(NDSE,*) 'IMPTOTAL is selected'
       WRITE(NDSE,*) 'But PDLIB is not'
-      CALL FLUSH(NDSE) 
-      STOP 
+      CALL FLUSH(NDSE)
+      STOP
     ELSE IF (FSTOTALEXP .and. .NOT. LPDLIB) THEN
       WRITE(NDSE,*) 'EXPTOTAL is selected'
       WRITE(NDSE,*) 'But PDLIB is not'
-      CALL FLUSH(NDSE) 
-      STOP 
+      CALL FLUSH(NDSE)
+      STOP
     END IF
 #ifdef W3_PDLIB
     IF (B_JGS_BLOCK_GAUSS_SEIDEL .AND. .NOT. B_JGS_USE_JACOBI) THEN
       WRITE(NDSE,*) 'B_JGS_BLOCK_GAUSS_SEIDEL is used but the Jacobi solver is not choosen'
       WRITE(NDSE,*) 'Please set JGS_USE_JACOBI .eqv. .true.'
-      CALL FLUSH(NDSE) 
-      STOP 
+      CALL FLUSH(NDSE)
+      STOP
     ENDIF
 #endif
-      
+
     !
     ! 1.c Open files without unpacking MDS ,,,
     !
@@ -2136,6 +2136,7 @@ CONTAINS
          DTDYN, FCUT, SPPNT, ABA, ABD, UBA, UBD,   &
          SXX, SYY, SXY, USERO, PHS, PTP, PLP,      &
          PDIR, PSI, PWS, PWST, PNR, PHIAW, PHIOC,  &
+         WS8HS, SW8HS, SW8TP, SW8DP, WS8TP, WS8DP, &
          TUSX, TUSY, TAUWIX, TAUWIY, TAUOX,        &
          TAUOY, USSX, USSY, MSSX, MSSY, MSSD,      &
          MSCX, MSCY, MSCD, PRMS, TPMS, CHARN,      &
@@ -2234,7 +2235,7 @@ CONTAINS
       ! grid points because they are input fields, and therefore this MPI
       ! communication is not necessary and they do not contribute to NRQMAX.
       !
-      ! Calculation of NRQMAX splitted by output groups and field type
+      ! Calculation of NRQMAX split by output groups and field type
       !       scalar                2-comp   3-comp
       NRQMAX =   1           +    0  +    0  +  &  ! group 1
            18                +    0  +    0  +  &  ! group 2
@@ -2806,6 +2807,79 @@ CONTAINS
 #ifdef W3_MPIT
           WRITE (NDST,9011) IH, ' 4/17', IROOT, IT, IRQGO(IH), IERR
 #endif
+#ifdef W3_MPI
+        END IF
+        !
+        IF ( FLGRDALL( 4,18) ) THEN
+          IH     = IH + 1
+          IT     = IT + 1
+          CALL MPI_SEND_INIT (WS8HS  (1),NSEALM , MPI_REAL, IROOT,    &
+               IT, MPI_COMM_WAVE, IRQGO(IH), IERR)
+#endif
+#ifdef W3_MPIT
+           WRITE (NDST,9011) IH, ' 4/18', IROOT, IT, IRQGO(IH), IERR
+#endif
+#ifdef W3_MPI
+        END IF
+        !
+        IF ( FLGRDALL( 4,19) ) THEN
+          IH     = IH + 1
+          IT     = IT + 1
+          CALL MPI_SEND_INIT (SW8HS  (1),NSEALM , MPI_REAL, IROOT,    &
+               IT, MPI_COMM_WAVE, IRQGO(IH), IERR)
+#endif
+#ifdef W3_MPIT
+           WRITE (NDST,9011) IH, ' 4/19', IROOT, IT, IRQGO(IH), IERR
+#endif
+#ifdef W3_MPI
+        END IF
+        !
+        IF ( FLGRDALL( 4,20) ) THEN
+          IH     = IH + 1
+          IT     = IT + 1
+          CALL MPI_SEND_INIT (WS8TP  (1),NSEALM , MPI_REAL, IROOT,    &
+               IT, MPI_COMM_WAVE, IRQGO(IH), IERR)
+#endif
+#ifdef W3_MPIT
+           WRITE (NDST,9011) IH, ' 4/20', IROOT, IT, IRQGO(IH), IERR
+#endif
+#ifdef W3_MPI
+        END IF
+        !
+        IF ( FLGRDALL( 4,21) ) THEN
+          IH     = IH + 1
+          IT     = IT + 1
+          CALL MPI_SEND_INIT (SW8TP  (1),NSEALM , MPI_REAL, IROOT,    &
+               IT, MPI_COMM_WAVE, IRQGO(IH), IERR)
+#endif
+#ifdef W3_MPIT
+           WRITE (NDST,9011) IH, ' 4/21', IROOT, IT, IRQGO(IH), IERR
+#endif
+#ifdef W3_MPI
+        END IF
+        !
+        IF ( FLGRDALL( 4,22) ) THEN
+          IH     = IH + 1
+          IT     = IT + 1
+          CALL MPI_SEND_INIT (WS8DP  (1),NSEALM , MPI_REAL, IROOT,    &
+               IT, MPI_COMM_WAVE, IRQGO(IH), IERR)
+#endif
+#ifdef W3_MPIT
+           WRITE (NDST,9011) IH, ' 4/22', IROOT, IT, IRQGO(IH), IERR
+#endif
+#ifdef W3_MPI
+        END IF
+        !
+        IF ( FLGRDALL( 4,23) ) THEN
+          IH     = IH + 1
+          IT     = IT + 1
+          CALL MPI_SEND_INIT (SW8DP  (1),NSEALM , MPI_REAL, IROOT,    &
+               IT, MPI_COMM_WAVE, IRQGO(IH), IERR)
+#endif
+#ifdef W3_MPIT
+           WRITE (NDST,9011) IH, ' 4/23', IROOT, IT, IRQGO(IH), IERR
+#endif
+!
 #ifdef W3_MPI
         END IF
         !
@@ -4039,6 +4113,79 @@ CONTAINS
 #ifdef W3_MPIT
             WRITE (NDST,9011) IH, ' 4/17', IFROM, IT, IRQGO2(IH), IERR
 #endif
+#ifdef W3_MPI
+          END IF
+          !
+          IF ( FLGRDALL( 4,18) ) THEN
+            IH     = IH + 1
+            IT     = IT + 1
+            CALL MPI_RECV_INIT (WS8HS  (I0),1,WW3_FIELD_VEC, IFROM, IT,  &
+                 MPI_COMM_WAVE, IRQGO2(IH), IERR )
+#endif
+#ifdef W3_MPIT
+            WRITE (NDST,9011) IH, ' 4/18', IFROM, IT, IRQGO2(IH), IERR
+#endif
+#ifdef W3_MPI
+          END IF
+          !
+          IF ( FLGRDALL( 4,19) ) THEN
+            IH     = IH + 1
+            IT     = IT + 1
+            CALL MPI_RECV_INIT (SW8HS  (I0),1,WW3_FIELD_VEC, IFROM, IT,  &
+                 MPI_COMM_WAVE, IRQGO2(IH), IERR )
+#endif
+#ifdef W3_MPIT
+            WRITE (NDST,9011) IH, ' 4/19', IFROM, IT, IRQGO2(IH), IERR
+#endif
+#ifdef W3_MPI
+          END IF
+          !
+          IF ( FLGRDALL( 4,20) ) THEN
+            IH     = IH + 1
+            IT     = IT + 1
+            CALL MPI_RECV_INIT (WS8TP  (I0),1,WW3_FIELD_VEC, IFROM, IT,  &
+                 MPI_COMM_WAVE, IRQGO2(IH), IERR )
+#endif
+#ifdef W3_MPIT
+            WRITE (NDST,9011) IH, ' 4/20', IFROM, IT, IRQGO2(IH), IERR
+#endif
+#ifdef W3_MPI
+          END IF
+          !
+          IF ( FLGRDALL( 4,21) ) THEN
+            IH     = IH + 1
+            IT     = IT + 1
+            CALL MPI_RECV_INIT (SW8TP  (I0),1,WW3_FIELD_VEC, IFROM, IT,  &
+                 MPI_COMM_WAVE, IRQGO2(IH), IERR )
+#endif
+#ifdef W3_MPIT
+            WRITE (NDST,9011) IH, ' 4/21', IFROM, IT, IRQGO2(IH), IERR
+#endif
+#ifdef W3_MPI
+          END IF
+          !
+          IF ( FLGRDALL( 4,22) ) THEN
+            IH     = IH + 1
+            IT     = IT + 1
+            CALL MPI_RECV_INIT (WS8DP  (I0),1,WW3_FIELD_VEC, IFROM, IT,  &
+                 MPI_COMM_WAVE, IRQGO2(IH), IERR )
+#endif
+#ifdef W3_MPIT
+            WRITE (NDST,9011) IH, ' 4/22', IFROM, IT, IRQGO2(IH), IERR
+#endif
+#ifdef W3_MPI
+          END IF
+          !
+          IF ( FLGRDALL( 4,23) ) THEN
+            IH     = IH + 1
+            IT     = IT + 1
+            CALL MPI_RECV_INIT (SW8DP  (I0),1,WW3_FIELD_VEC, IFROM, IT,  &
+                 MPI_COMM_WAVE, IRQGO2(IH), IERR )
+#endif
+#ifdef W3_MPIT
+            WRITE (NDST,9011) IH, ' 4/23', IFROM, IT, IRQGO2(IH), IERR
+#endif
+!
 #ifdef W3_MPI
           END IF
           !

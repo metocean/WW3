@@ -160,7 +160,7 @@ PROGRAM W3OUNP
   !     NOPTS is the total number of stations defined in out_pnt.ww3
   !     NFL is the number of bunch of MFL stations to loop on to
   !     process all the NOPTS stations
-  !     NREQ is the number of valid stations to process, unvalid stations
+  !     NREQ is the number of valid stations to process, invalid stations
   !     are duplicata or stations not specified in the input file
   !
   !  9. Switches :
@@ -280,7 +280,8 @@ PROGRAM W3OUNP
   CHARACTER(LEN=128),ALLOCATABLE      :: NCFILE(:)
   !
   LOGICAL                 :: FLSRCE(7)
-  LOGICAL                 :: TOGETHER, ORDER, FLGNML
+  LOGICAL                 :: TOGETHER, ORDER, FLGNML, SINGLEFILE
+  CHARACTER, SAVE         :: FIRSTTIME*16 = '0000000000000000'
   LOGICAL, ALLOCATABLE    :: FLREQ(:)
   !
   !/
@@ -546,7 +547,7 @@ PROGRAM W3OUNP
     CALL NEXTLN ( COMSTR , NDSI , NDSE )
     READ (NDSI,*,END=801,ERR=802) FILEPREFIX
     CALL NEXTLN ( COMSTR , NDSI , NDSE )
-    READ (NDSI,*,END=801,ERR=802) S3
+    READ (NDSI,*,END=801,ERR=802) S3, SINGLEFILE
     CALL NEXTLN ( COMSTR , NDSI , NDSE )
     READ (NDSI,*,END=801,ERR=802) NCTYPE
     CALL NEXTLN ( COMSTR , NDSI , NDSE )
@@ -596,7 +597,7 @@ PROGRAM W3OUNP
   ELSE
     WRITE(DATE,'(I8.8,I6.6)') TIME(1), TIME(2)
   END IF
-  WRITE(FILETIME,'(8A)') DATE(1:4), DATE(5:6), DATE(7:8), 'T', DATE(9:10), 'Z'
+  WRITE(FILETIME,'(7A)') DATE(1:4), DATE(5:6), DATE(7:8), 'T', DATE(9:10)
 
 
   ! 4.1.3 Loops on TIME from out_pnt file to reach the first time PASTDATE
@@ -640,9 +641,9 @@ PROGRAM W3OUNP
   IF (S3.EQ.0) THEN
     FILETIME = ''
   ELSE IF (S3.EQ.10) THEN
-    WRITE(FORMAT1,'(A,I1,A,I1,A)') '(I8.8,A1,I',S5,'.',S5,',A1)'
+    WRITE(FORMAT1,'(A,I1,A,I1,A)') '(I8.8,A1,I',S5,'.',S5,')'
     WRITE (FILETIME,FORMAT1) TIME(1), 'T', &
-         FLOOR(REAL(TIME(2))/NINT(10.**(6-S5))), 'Z'
+         FLOOR(REAL(TIME(2))/NINT(10.**(6-S5)))
     ! if S3=>YYYYMMDD then filetime='YYYYMMDD'
   ELSE IF (S3.EQ.8) THEN
     WRITE(FORMAT1,'(A,I1,A,I1,A)') '(I',S3,'.',S3,')'
@@ -652,6 +653,9 @@ PROGRAM W3OUNP
   ELSE
     WRITE(FORMAT1,'(A,I1,A,I1,A)') '(I',S3,'.',S3,')'
     WRITE (FILETIME,FORMAT1) FLOOR(REAL(TIME(1))/NINT(10.**(8-S3)))
+  END IF
+  IF (SINGLEFILE) THEN
+    FIRSTTIME=FILETIME
   END IF
   !
   ! order time,station
@@ -752,23 +756,26 @@ PROGRAM W3OUNP
 
     ! 5.6.1 Redefines the filetime when it's a new date defined by the date division S3
     ! if S3=>YYYYMMDDHH then filetime='YYYYMMDDTHHMMSSZ'
-    IF (S3.EQ.0) THEN
-      FILETIME = ''
-    ELSE IF (S3.EQ.10) THEN
-      WRITE(FORMAT1,'(A,I1,A,I1,A)') '(I8.8,A1,I',S5,'.',S5,',A1)'
-      WRITE (FILETIME,FORMAT1) TIME(1), 'T', &
-           NINT(REAL(TIME(2))/NINT(10.**(6-S5))), 'Z'
-      ! if S3=>YYYYMMDD then filetime='YYYYMMDD'
-    ELSE IF (S3.EQ.8) THEN
-      WRITE(FORMAT1,'(A,I1,A,I1,A)') '(I',S3,'.',S3,')'
-      WRITE (FILETIME,FORMAT1) TIME(1)
-      ! if S3=>YYYYMM then filetime='YYYYMM'
-      ! or S3=>YYYY then filetime='YYYY'
+    IF (SINGLEFILE) THEN
+      FILETIME=FIRSTTIME
     ELSE
-      WRITE(FORMAT1,'(A,I1,A,I1,A)') '(I',S3,'.',S3,')'
-      WRITE (FILETIME,FORMAT1) NINT(REAL(TIME(1))/NINT(10.**(8-S3)))
+      IF (S3.EQ.0) THEN
+        FILETIME = ''
+      ELSE IF (S3.EQ.10) THEN
+        WRITE(FORMAT1,'(A,I1,A,I1,A)') '(I8.8,A1,I',S5,'.',S5,')'
+        WRITE (FILETIME,FORMAT1) TIME(1), 'T', &
+               NINT(REAL(TIME(2))/NINT(10.**(6-S5)))
+        ! if S3=>YYYYMMDD then filetime='YYYYMMDD'
+      ELSE IF (S3.EQ.8) THEN
+        WRITE(FORMAT1,'(A,I1,A,I1,A)') '(I',S3,'.',S3,')'
+        WRITE (FILETIME,FORMAT1) TIME(1)
+        ! if S3=>YYYYMM then filetime='YYYYMM'
+        ! or S3=>YYYY then filetime='YYYY'
+      ELSE
+        WRITE(FORMAT1,'(A,I1,A,I1,A)') '(I',S3,'.',S3,')'
+        WRITE (FILETIME,FORMAT1) NINT(REAL(TIME(1))/NINT(10.**(8-S3)))
+      END IF
     END IF
-
 
     ! 5.6.2 Defines the file names
     ! defines unique file name (TOGETHER)
@@ -1088,13 +1095,14 @@ PROGRAM W3OUNP
 
 
       ! 6.1 Creates a new file if it is a new date defined by the date division S3
-      IF ( (IOUT.GT.1) .AND. (INDEX(PASTDATE(1:S3),DATE(1:S3)).EQ.0) ) THEN
-        WRITE(NDSO,954) TRIM(DATE(1:S3))
-        ! decrements timesteps already processed
-        NOUT=NOUT-(IOUT-1)
-        GOTO 700
+      IF (.NOT.SINGLEFILE) THEN
+        IF ( (IOUT.GT.1) .AND. (INDEX(PASTDATE(1:S3),DATE(1:S3)).EQ.0) ) THEN
+          WRITE(NDSO,954) TRIM(DATE(1:S3))
+          ! decrements timesteps already processed
+          NOUT=NOUT-(IOUT-1)
+          GOTO 700
+        END IF
       END IF
-
 
       ! 6.2 Writes out a progress message
       IF (NREQ.GT.10.OR.NBFILEOUT.GT.10) WRITE(NDSO,955) TIME,    &
@@ -3287,7 +3295,7 @@ CONTAINS
       IRET=NF90_PUT_ATT(NCID,VARID(8),'long_name','friction velocity')
       IRET=NF90_PUT_ATT(NCID,VARID(8),'standard_name','friction_velocity')
       IRET=NF90_PUT_ATT(NCID,VARID(8),'globwave_name','friction_velocity')
-      IRET=NF90_PUT_ATT(NCID,VARID(8),'units','m s-1')
+      IRET=NF90_PUT_ATT(NCID,VARID(8),'units','m.s^{-1}')
       IRET=NF90_PUT_ATT(NCID,VARID(8),'scale_factor',1.)
       IRET=NF90_PUT_ATT(NCID,VARID(8),'add_offset',0.)
       IRET=NF90_PUT_ATT(NCID,VARID(8),'valid_min',0.)
@@ -3301,7 +3309,7 @@ CONTAINS
       IRET=NF90_PUT_ATT(NCID,VARID(9),'long_name','wind speed at 10m')
       IRET=NF90_PUT_ATT(NCID,VARID(9),'standard_name','wind_speed')
       IRET=NF90_PUT_ATT(NCID,VARID(9),'globwave_name','wind_speed')
-      IRET=NF90_PUT_ATT(NCID,VARID(9),'units','m s-1')
+      IRET=NF90_PUT_ATT(NCID,VARID(9),'units','m.s^{-1}')
       IRET=NF90_PUT_ATT(NCID,VARID(9),'scale_factor',1.)
       IRET=NF90_PUT_ATT(NCID,VARID(9),'add_offset',0.)
       IRET=NF90_PUT_ATT(NCID,VARID(9),'valid_min',0.)
@@ -3585,7 +3593,7 @@ CONTAINS
       IRET=NF90_PUT_ATT(NCID,VARID(12),'long_name','wind speed at 10m')
       IRET=NF90_PUT_ATT(NCID,VARID(12),'standard_name','wind_speed')
       IRET=NF90_PUT_ATT(NCID,VARID(12),'globwave_name','wind_speed')
-      IRET=NF90_PUT_ATT(NCID,VARID(12),'units','m s-1')
+      IRET=NF90_PUT_ATT(NCID,VARID(12),'units','m.s^{-1}')
       IF (NCVARTYPE.LE.3) THEN
         IRET=NF90_PUT_ATT(NCID,VARID(12),'scale_factor',0.1)
         IRET=NF90_PUT_ATT(NCID,VARID(12),'add_offset',0.)
@@ -3647,7 +3655,7 @@ CONTAINS
       IRET=NF90_PUT_ATT(NCID,VARID(14),'long_name','sea water speed')
       IRET=NF90_PUT_ATT(NCID,VARID(14),'standard_name','sea_water_speed')
       IRET=NF90_PUT_ATT(NCID,VARID(14),'globwave_name','sea_water_speed')
-      IRET=NF90_PUT_ATT(NCID,VARID(14),'units','m s-1')
+      IRET=NF90_PUT_ATT(NCID,VARID(14),'units','m.s^{-1}')
       IF (NCVARTYPE.LE.3) THEN
         IRET=NF90_PUT_ATT(NCID,VARID(14),'scale_factor',0.1)
         IRET=NF90_PUT_ATT(NCID,VARID(14),'add_offset',0.)
@@ -3763,7 +3771,7 @@ CONTAINS
       IRET=NF90_PUT_ATT(NCID,VARID(8),'long_name','wind speed at 10m')
       IRET=NF90_PUT_ATT(NCID,VARID(8),'standard_name','wind_speed')
       IRET=NF90_PUT_ATT(NCID,VARID(8),'globwave_name','wind_speed')
-      IRET=NF90_PUT_ATT(NCID,VARID(8),'units','m s-1')
+      IRET=NF90_PUT_ATT(NCID,VARID(8),'units','m.s^{-1}')
       IRET=NF90_PUT_ATT(NCID,VARID(8),'scale_factor',1.)
       IRET=NF90_PUT_ATT(NCID,VARID(8),'add_offset',0.)
       IRET=NF90_PUT_ATT(NCID,VARID(8),'valid_min',0.)
@@ -3799,7 +3807,7 @@ CONTAINS
       IRET=NF90_PUT_ATT(NCID,VARID(10),'long_name','sea water speed')
       IRET=NF90_PUT_ATT(NCID,VARID(10),'standard_name','sea_water_speed')
       IRET=NF90_PUT_ATT(NCID,VARID(10),'globwave_name','sea_water_speed')
-      IRET=NF90_PUT_ATT(NCID,VARID(10),'units','m s-1')
+      IRET=NF90_PUT_ATT(NCID,VARID(10),'units','m.s^{-1}')
       IRET=NF90_PUT_ATT(NCID,VARID(10),'scale_factor',1.)
       IRET=NF90_PUT_ATT(NCID,VARID(10),'add_offset',0.)
       IRET=NF90_PUT_ATT(NCID,VARID(10),'valid_min',0.)
@@ -3995,7 +4003,7 @@ CONTAINS
       IRET=NF90_PUT_ATT(NCID,VARID(7),'long_name','sea water speed')
       IRET=NF90_PUT_ATT(NCID,VARID(7),'standard_name','sea_water_speed')
       IRET=NF90_PUT_ATT(NCID,VARID(7),'globwave_name','sea_water_speed')
-      IRET=NF90_PUT_ATT(NCID,VARID(7),'units','m s-1')
+      IRET=NF90_PUT_ATT(NCID,VARID(7),'units','m.s^{-1}')
       IRET=NF90_PUT_ATT(NCID,VARID(7),'scale_factor',1.)
       IRET=NF90_PUT_ATT(NCID,VARID(7),'add_offset',0.)
       IRET=NF90_PUT_ATT(NCID,VARID(7),'valid_min',0.)
@@ -4031,7 +4039,7 @@ CONTAINS
       IRET=NF90_PUT_ATT(NCID,VARID(9),'long_name','wind speed at 10m')
       IRET=NF90_PUT_ATT(NCID,VARID(9),'standard_name','wind_speed')
       IRET=NF90_PUT_ATT(NCID,VARID(9),'globwave_name','wind_speed')
-      IRET=NF90_PUT_ATT(NCID,VARID(9),'units','m s-1')
+      IRET=NF90_PUT_ATT(NCID,VARID(9),'units','m.s^{-1}')
       IRET=NF90_PUT_ATT(NCID,VARID(9),'scale_factor',1.)
       IRET=NF90_PUT_ATT(NCID,VARID(9),'add_offset',0.)
       IRET=NF90_PUT_ATT(NCID,VARID(9),'valid_min',0.)
@@ -4232,7 +4240,7 @@ CONTAINS
       IRET=NF90_PUT_ATT(NCID,VARID(6),'long_name','friction velocity')
       IRET=NF90_PUT_ATT(NCID,VARID(6),'standard_name','friction_velocity')
       IRET=NF90_PUT_ATT(NCID,VARID(6),'globwave_name','friction_velocity')
-      IRET=NF90_PUT_ATT(NCID,VARID(6),'units','m s-1')
+      IRET=NF90_PUT_ATT(NCID,VARID(6),'units','m.s^{-1}')
       IRET=NF90_PUT_ATT(NCID,VARID(6),'scale_factor',1.)
       IRET=NF90_PUT_ATT(NCID,VARID(6),'add_offset',0.)
       IRET=NF90_PUT_ATT(NCID,VARID(6),'valid_min',0.)
@@ -4323,7 +4331,7 @@ CONTAINS
       IRET=NF90_PUT_ATT(NCID,VARID(6),'long_name','wind speed at 10m')
       IRET=NF90_PUT_ATT(NCID,VARID(6),'standard_name','wind_speed')
       IRET=NF90_PUT_ATT(NCID,VARID(6),'globwave_name','wind_speed')
-      IRET=NF90_PUT_ATT(NCID,VARID(6),'units','m s-1')
+      IRET=NF90_PUT_ATT(NCID,VARID(6),'units','m.s^{-1}')
       IRET=NF90_PUT_ATT(NCID,VARID(6),'scale_factor',1.)
       IRET=NF90_PUT_ATT(NCID,VARID(6),'add_offset',0.)
       IRET=NF90_PUT_ATT(NCID,VARID(6),'valid_min',0.)
@@ -4414,7 +4422,7 @@ CONTAINS
       IRET=NF90_PUT_ATT(NCID,VARID(6),'long_name','wind speed at 10m')
       IRET=NF90_PUT_ATT(NCID,VARID(6),'standard_name','wind_speed')
       IRET=NF90_PUT_ATT(NCID,VARID(6),'globwave_name','wind_speed')
-      IRET=NF90_PUT_ATT(NCID,VARID(6),'units','m s-1')
+      IRET=NF90_PUT_ATT(NCID,VARID(6),'units','m.s^{-1}')
       IRET=NF90_PUT_ATT(NCID,VARID(6),'scale_factor',1.)
       IRET=NF90_PUT_ATT(NCID,VARID(6),'add_offset',0.)
       IRET=NF90_PUT_ATT(NCID,VARID(6),'valid_min',0.)
@@ -4533,7 +4541,7 @@ CONTAINS
       IRET=NF90_PUT_ATT(NCID,VARID(6),'long_name','wind speed at 10m')
       IRET=NF90_PUT_ATT(NCID,VARID(6),'standard_name','wind_speed')
       IRET=NF90_PUT_ATT(NCID,VARID(6),'globwave_name','wind_speed')
-      IRET=NF90_PUT_ATT(NCID,VARID(6),'units','m s-1')
+      IRET=NF90_PUT_ATT(NCID,VARID(6),'units','m.s^{-1}')
       IRET=NF90_PUT_ATT(NCID,VARID(6),'scale_factor',1.)
       IRET=NF90_PUT_ATT(NCID,VARID(6),'add_offset',0.)
       IRET=NF90_PUT_ATT(NCID,VARID(6),'valid_min',0.)
@@ -4651,7 +4659,7 @@ CONTAINS
       IRET=NF90_PUT_ATT(NCID,VARID(8),'long_name','friction velocity')
       IRET=NF90_PUT_ATT(NCID,VARID(8),'standard_name','friction_velocity')
       IRET=NF90_PUT_ATT(NCID,VARID(8),'globwave_name','friction_velocity')
-      IRET=NF90_PUT_ATT(NCID,VARID(8),'units','m s-1')
+      IRET=NF90_PUT_ATT(NCID,VARID(8),'units','m.s^{-1}')
       IRET=NF90_PUT_ATT(NCID,VARID(8),'scale_factor',1.)
       IRET=NF90_PUT_ATT(NCID,VARID(8),'add_offset',0.)
       IRET=NF90_PUT_ATT(NCID,VARID(8),'valid_min',0.)
@@ -4666,7 +4674,7 @@ CONTAINS
       IRET=NF90_PUT_ATT(NCID,VARID(9),'long_name','wind speed at 10m')
       IRET=NF90_PUT_ATT(NCID,VARID(9),'standard_name','wind_speed')
       IRET=NF90_PUT_ATT(NCID,VARID(9),'globwave_name','wind_speed')
-      IRET=NF90_PUT_ATT(NCID,VARID(9),'units','m s-1')
+      IRET=NF90_PUT_ATT(NCID,VARID(9),'units','m.s^{-1}')
       IRET=NF90_PUT_ATT(NCID,VARID(9),'scale_factor',1.)
       IRET=NF90_PUT_ATT(NCID,VARID(9),'add_offset',0.)
       IRET=NF90_PUT_ATT(NCID,VARID(9),'valid_min',0.)
@@ -4945,7 +4953,7 @@ CONTAINS
       IRET=NF90_PUT_ATT(NCID,VARID(8),'long_name','friction velocity')
       IRET=NF90_PUT_ATT(NCID,VARID(8),'standard_name','friction_velocity')
       IRET=NF90_PUT_ATT(NCID,VARID(8),'globwave_name','friction_velocity')
-      IRET=NF90_PUT_ATT(NCID,VARID(8),'units','m s-1')
+      IRET=NF90_PUT_ATT(NCID,VARID(8),'units','m.s^{-1}')
       IRET=NF90_PUT_ATT(NCID,VARID(8),'scale_factor',1.)
       IRET=NF90_PUT_ATT(NCID,VARID(8),'add_offset',0.)
       IRET=NF90_PUT_ATT(NCID,VARID(8),'valid_min',0.)
@@ -4960,7 +4968,7 @@ CONTAINS
       IRET=NF90_PUT_ATT(NCID,VARID(9),'long_name','wind speed at 10m')
       IRET=NF90_PUT_ATT(NCID,VARID(9),'standard_name','wind_speed')
       IRET=NF90_PUT_ATT(NCID,VARID(9),'globwave_name','wind_speed')
-      IRET=NF90_PUT_ATT(NCID,VARID(9),'units','m s-1')
+      IRET=NF90_PUT_ATT(NCID,VARID(9),'units','m.s^{-1}')
       IRET=NF90_PUT_ATT(NCID,VARID(9),'scale_factor',1.)
       IRET=NF90_PUT_ATT(NCID,VARID(9),'add_offset',0.)
       IRET=NF90_PUT_ATT(NCID,VARID(9),'valid_min',0.)
@@ -5286,7 +5294,7 @@ CONTAINS
       IRET=NF90_PUT_ATT(NCID,VARID(11),'long_name','wind speed at 10m')
       IRET=NF90_PUT_ATT(NCID,VARID(11),'standard_name','wind_speed')
       IRET=NF90_PUT_ATT(NCID,VARID(11),'globwave_name','wind_speed')
-      IRET=NF90_PUT_ATT(NCID,VARID(11),'units','m s-1')
+      IRET=NF90_PUT_ATT(NCID,VARID(11),'units','m.s^{-1}')
       IRET=NF90_PUT_ATT(NCID,VARID(11),'scale_factor',1.)
       IRET=NF90_PUT_ATT(NCID,VARID(11),'add_offset',0.)
       IRET=NF90_PUT_ATT(NCID,VARID(11),'valid_min',0.)
@@ -5322,7 +5330,7 @@ CONTAINS
       IRET=NF90_PUT_ATT(NCID,VARID(13),'long_name','sea water speed')
       IRET=NF90_PUT_ATT(NCID,VARID(13),'standard_name','sea_water_speed')
       IRET=NF90_PUT_ATT(NCID,VARID(13),'globwave_name','sea_water_speed')
-      IRET=NF90_PUT_ATT(NCID,VARID(13),'units','m s-1')
+      IRET=NF90_PUT_ATT(NCID,VARID(13),'units','m.s^{-1}')
       IRET=NF90_PUT_ATT(NCID,VARID(13),'scale_factor',1.)
       IRET=NF90_PUT_ATT(NCID,VARID(13),'add_offset',0.)
       IRET=NF90_PUT_ATT(NCID,VARID(13),'valid_min',0.)
@@ -5359,7 +5367,7 @@ CONTAINS
       IRET=NF90_PUT_ATT(NCID,VARID(15),'long_name','friction velocity')
       IRET=NF90_PUT_ATT(NCID,VARID(15),'standard_name','friction_velocity')
       IRET=NF90_PUT_ATT(NCID,VARID(15),'globwave_name','friction_velocity')
-      IRET=NF90_PUT_ATT(NCID,VARID(15),'units','m s-1')
+      IRET=NF90_PUT_ATT(NCID,VARID(15),'units','m.s^{-1}')
       IRET=NF90_PUT_ATT(NCID,VARID(15),'scale_factor',1.)
       IRET=NF90_PUT_ATT(NCID,VARID(15),'add_offset',0.)
       IRET=NF90_PUT_ATT(NCID,VARID(15),'valid_min',0.)

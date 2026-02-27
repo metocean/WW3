@@ -68,8 +68,8 @@ MODULE W3IOGOMD
   !/    04-Oct-2019 : Optional one file per output stride ( version 7.00 )
   !/                  (Roberto Padilla-Hernandez & J.H. Alves)
   !/    03-Nov-2020 : Factored out NAME matching into     ( version 7.12 )
-  !/                  seperate subroutine. (C. Bunney)
-  !/    15-Jan-2021 : Added TP output based on exsiting   ( version 7.12 )
+  !/                  separate subroutine. (C. Bunney)
+  !/    15-Jan-2021 : Added TP output based on existing   ( version 7.12 )
   !/                  FP internal field. (C. Bunney)
   !/    22-Mar-2021 : Add extra coupling fields as output ( version 7.13 )
   !/    21-Jul-2022 : Correct FP0 calc for peak energy in ( version 7.14 )
@@ -129,7 +129,7 @@ MODULE W3IOGOMD
   !       !/OMPG  OpenMP compiler directive for loop splitting.
   !
   !       !/O8    Filter for low wave heights ( HSMIN )
-  !       !/O9    Negative wave height alowed, other mean parameters will
+  !       !/O9    Negative wave height allowed, other mean parameters will
   !             not be correct.
   !
   !       !/ST0   No source terms.
@@ -345,7 +345,7 @@ CONTAINS
     !/    30-Apr-2014 : Add th2m and sth2m calculation      ( version 5.01 )
     !/    25-Sep-2020 : Calculate FLG1D for any processor   ( version 7.10 )
     !/    03-Nov-2020 : Factored out NAME matching into     ( version 7.12 )
-    !/                  seperate subroutine (C. Bunney)
+    !/                  separate subroutine (C. Bunney)
     !/
     !  1. Purpose :
     !
@@ -596,7 +596,7 @@ CONTAINS
     !/    17-Feb-2016 : New version for namelist use        ( version 5.11 )
     !/    25-Sep-2020 : Calculate FLG1D for any processor   ( version 7.10 )
     !/    03-Nov-2020 : Factored out NAME matching into     ( version 7.12 )
-    !/                  seperate subroutine (C. Bunney)
+    !/                  separate subroutine (C. Bunney)
     !/
     !  1. Purpose :
     !
@@ -991,6 +991,24 @@ CONTAINS
     CASE('PNR')
       I = 4
       J = 17
+    CASE('SEA8HS')
+      I = 4
+      J = 18
+    CASE('SW8HS')
+      I = 4
+      J = 19
+    CASE('SEA8TP')
+      I = 4
+      J = 20
+    CASE('SW8TP')
+      I = 4
+      J = 21
+    CASE('SEA8DP')
+      I = 4
+      J = 22
+    CASE('SW8DP')
+      I = 4
+      J = 23
       !
       ! Group 5
       !
@@ -1264,7 +1282,7 @@ CONTAINS
     !     !/OMPG  OpenMP compiler directive for loop splitting.
     !
     !     !/O8    Filter for low wave heights ( HSMIN )
-    !     !/O9    Negative wave height alowed, other mean parameters will
+    !     !/O9    Negative wave height allowed, other mean parameters will
     !             not be correct.
     !
     !     !/ST0   No source terms.
@@ -1294,7 +1312,8 @@ CONTAINS
          TH2M, STH2M, HSIG, STMAXE, STMAXD,          &
          HCMAXE, HMAXE, HCMAXD, HMAXD, USSP, QP, PQP,&
          PTHP0, PPE, PGW, PSW, PTM1, PT1, PT2, PEP,  &
-         WBT
+         WBT, SW8HS, SW8TP,  SW8DP, WS8TP, WS8DP,    &
+         WS8HS
     USE W3ODATMD, ONLY: NDST, UNDEF, IAPROC, NAPROC, NAPFLD,        &
          ICPRT, DTPRT, WSCUT, NOSWLL, FLOGRD, FLOGR2,&
          NOGRP, NGRPP
@@ -1316,8 +1335,8 @@ CONTAINS
     !/ Local parameters
     !/
     INTEGER                 :: IK, ITH, JSEA, ISEA, IX, IY,         &
-         IKP0(NSEAL), NKH(NSEAL),             &
-         I, J, LKMS, HKMS, ITL
+         IKP0(NSEAL), NKH(NSEAL), IKPSW8(NSEAL), IKPWS8(NSEAL),     &
+         ILOW, ICEN, IHGH, I, J, LKMS, HKMS, ITL
 #ifdef W3_S
     INTEGER, SAVE           :: IENT = 0
 #endif
@@ -1330,6 +1349,7 @@ CONTAINS
          ETXX(NSEAL), ETYY(NSEAL), ETXY(NSEAL),&
          ABX(NSEAL), ABY(NSEAL),ET02(NSEAL),  &
          EBD(NK,NSEAL), EC(NSEAL),            &
+         ECSW(NSEAL), ECWS(NSEAL),            &
          ABR(NSEAL), UBR(NSEAL), UBS(NSEAL),  &
          ABX2(NSEAL), ABY2(NSEAL),            &
          AB2X(NSEAL), AB2Y(NSEAL),            &
@@ -1348,14 +1368,17 @@ CONTAINS
          T02P(NSEAL), NV(NSEAL), NS(NSEAL),   &
          NB(NSEAL), MODE(NSEAL),              &
          MU(NSEAL), NI(NSEAL), STMAXEL(NSEAL),&
-         PHI(21,NSEAL),PHIST(NSEAL),         &
+         PHI(21,NSEAL),PHIST(NSEAL),          &
          EBC(NK,NSEAL), ABP(NSEAL),           &
          STMAXDL(NSEAL), TLPHI(NSEAL),        &
          WL02X(NSEAL), WL02Y(NSEAL),          &
          ALPXT(NSEAL), ALPYT(NSEAL),          &
-         ALPXY(NSEAL), SCREST(NSEAL)
+         ALPXY(NSEAL), SCREST(NSEAL),         &
+         et8ws(nseal), et8sw(nseal)
     REAL                       USSCO, FT1
+    INTEGER                    SPLITBIN1, SPLITBIN2
     REAL, SAVE              :: HSMIN = 0.01
+    REAL, SAVE              :: SPLITTP = 8.0
     LOGICAL                 :: FLOLOC(NOGRP,NGRPP)
     !/
     !/ ------------------------------------------------------------------- /
@@ -1377,6 +1400,8 @@ CONTAINS
     ! 1.  Initialize storage arrays -------------------------------------- *
     !
     ET     = 0.
+    et8sw  = 0.
+    et8ws  = 0.
     ET02   = 0.
     EWN    = 0.
     ETR    = 0.
@@ -1416,6 +1441,8 @@ CONTAINS
     ETTPMM = 0.
     EBD    = 0.
     EC     = 0.
+    ECSW   = 0.
+    ECWS   = 0.
     ETF    = 0.
     EBC    = 0.
     BHD = 0.
@@ -1462,6 +1489,12 @@ CONTAINS
     HMAXD = UNDEF
     QP    = UNDEF
     WBT    = UNDEF
+    WS8HS = UNDEF
+    SW8HS = UNDEF
+    WS8TP = UNDEF
+    SW8TP = UNDEF
+    WS8DP = UNDEF
+    SW8DP = UNDEF
     !
     ! 2.  Integral over discrete part of spectrum ------------------------ *
     !
@@ -1537,6 +1570,11 @@ CONTAINS
 #ifdef W3_IG1
         IF (IK.EQ.NINT(IGPARS(5))) HSIG(JSEA) = 4*SQRT(ET(JSEA))
 #endif
+        if (sig(ik).lt.(TPI/SPLITTP)) then
+          et8sw(jsea)=et8sw(jsea)+ebd(ik,jsea)
+        else
+          et8ws(jsea)=et8ws(jsea)+ebd(ik,jsea)
+        endif
         ETF(JSEA)  = ETF(JSEA) + EBD(IK,JSEA) * CG(IK,ISEA)
         EWN(JSEA)  = EWN(JSEA) + EBD(IK,JSEA) / WN(IK,ISEA)
         ETR(JSEA)  = ETR(JSEA) + EBD(IK,JSEA) / SIG(IK)
@@ -1974,6 +2012,8 @@ CONTAINS
         IF ( ET(JSEA) .GE. 0. ) THEN
 #endif
           HS (JSEA) = 4. * SQRT ( ET(JSEA) )
+          WS8HS(JSEA) = 4. * SQRT (ET8WS(JSEA))
+          SW8HS(JSEA) = 4. * SQRT (ET8SW(JSEA))
 #ifdef W3_O9
         ELSE
           HS (JSEA) = - 4. * SQRT ( -ET(JSEA) )
@@ -2051,8 +2091,16 @@ CONTAINS
     !
     DO JSEA=1, NSEAL
       EC  (JSEA) = EBD(NK,JSEA)
+      ECWS  (JSEA) = EBD(1,JSEA)
+      ECSW  (JSEA) = EBD(NK,JSEA)
       FP0 (JSEA) = UNDEF
+      SW8TP (JSEA) = UNDEF
+      WS8TP (JSEA) = UNDEF
+      SW8DP (JSEA) = UNDEF
+      WS8DP (JSEA) = UNDEF
       IKP0(JSEA) = NK
+      IKPSW8(JSEA) = 0
+      IKPWS8(JSEA) = 0
       THP0(JSEA) = UNDEF
     END DO
     !
@@ -2062,6 +2110,17 @@ CONTAINS
     !
     ! 4.b Discrete peak frequencies
     !
+! Determine split bin
+    SPLITBIN1=NK
+    SPLITBIN2=0
+    DO IK=NK-1, 2, -1
+        IF (sig(ik).lt.(TPI/SPLITTP)) THEN
+            SPLITBIN2 = MAX(SPLITBIN2, IK)
+        ELSE
+            SPLITBIN1 = MIN(SPLITBIN1, IK)
+        END IF
+    ENDDO
+!
     DO IK=NK-1, 1, -1
       !
 #ifdef W3_OMPG
@@ -2073,6 +2132,19 @@ CONTAINS
           EC  (JSEA) = EBD(IK,JSEA)
           IKP0(JSEA) = IK
         END IF
+
+        IF (sig(IK).lt.(TPI/SPLITTP)) THEN
+            IF ( ECSW(JSEA) .LT. EBD(IK,JSEA)) THEN
+                ECSW(JSEA) = EBD(IK,JSEA)
+                IKPSW8(JSEA) = IK
+            END IF
+        ELSE
+            IF ( ECWS(JSEA) .LT. EBD(IK,JSEA)) THEN
+                ECWS(JSEA) = EBD(IK,JSEA)
+                IKPWS8(JSEA) = IK
+            END IF
+        END IF
+
       END DO
       !
 #ifdef W3_OMPG
@@ -2081,12 +2153,24 @@ CONTAINS
       !
     END DO
     !
+    ! Check if TP is at split point
+    DO JSEA=1, NSEAL
+      IF (IKPWS8(JSEA).eq.SPLITBIN1) IKPWS8(JSEA) = 0
+      IF (IKPSW8(JSEA).eq.SPLITBIN2) IKPSW8(JSEA) = 0
+    END DO
+!
 #ifdef W3_OMPG
     !$OMP PARALLEL DO PRIVATE(JSEA)
 #endif
     !
     DO JSEA=1, NSEAL
       IF ( IKP0(JSEA) .NE. NK ) FP0(JSEA) = SIG(IKP0(JSEA)) * TPIINV
+      IF ( IKPWS8(JSEA) .NE. 0 ) THEN
+          WS8TP(JSEA) =  TPI / SIG(IKPWS8(JSEA))
+      ENDIF
+      IF ( IKPSW8(JSEA) .NE. 0 )  THEN
+          SW8TP(JSEA) = TPI / SIG(IKPSW8(JSEA))
+      END IF
     END DO
     !
 #ifdef W3_OMPG
@@ -2118,7 +2202,43 @@ CONTAINS
         FP0(JSEA) = FP0 (JSEA) * ( 1. + 0.5 * ( XL2*EH - XH2*EL )   &
              / SIGN ( MAX(ABS(DENOM),1.E-15) , DENOM ) )
       END IF
-    END DO
+!
+      ! Split8 windsea
+      IF ( IKPWS8(JSEA) .NE. 0 ) THEN
+        ILOW   = MAX (  1 , IKPWS8(JSEA)-1 )
+        ICEN   = MAX (  1 , IKPWS8(JSEA)   )
+        IHGH   = MIN ( NK , IKPWS8(JSEA)+1 )
+        EL     = EBD(ILOW,JSEA) - EBD(ICEN,JSEA)
+        EH     = EBD(IHGH,JSEA) - EBD(ICEN,JSEA)
+        IF (EBD(ILOW,JSEA) .LT. EBD(ICEN,JSEA) .AND. &
+            EBD(ICEN,JSEA) .GT. EBD(IHGH,JSEA)) THEN
+          DENOM  = XL*EH - XH*EL
+          WS8TP(JSEA) = WS8TP (JSEA) * ( 1. + 0.5 * ( XL2*EH - XH2*EL ) &
+                          / SIGN ( MAX(ABS(DENOM),1.E-15) , DENOM ) )
+        ELSE
+          WS8TP(JSEA) = UNDEF
+        END IF
+      END IF
+!
+      ! Split8 swell
+      IF ( IKPSW8(JSEA) .NE. 0 )  THEN
+        ILOW   = MAX (  1 , IKPSW8(JSEA)-1 )
+        ICEN   = MAX (  1 , IKPSW8(JSEA)   )
+        IHGH   = MIN ( NK , IKPSW8(JSEA)+1 )
+        EL     = EBD(ILOW,JSEA) - EBD(ICEN,JSEA)
+        EH     = EBD(IHGH,JSEA) - EBD(ICEN,JSEA)
+        DENOM  = XL*EH - XH*EL
+        IF (EBD(ILOW,JSEA) .LT. EBD(ICEN,JSEA) .AND. &
+            EBD(ICEN,JSEA) .GT. EBD(IHGH,JSEA)) THEN
+          DENOM  = XL*EH - XH*EL
+          SW8TP(JSEA) = SW8TP (JSEA) * ( 1. + 0.5 * ( XL2*EH - XH2*EL ) &
+                          / SIGN ( MAX(ABS(DENOM),1.E-15) , DENOM ) )
+        ELSE
+          SW8TP(JSEA) = UNDEF
+        END IF
+      END IF
+!
+    END DO ! JSEA=1, NSEAL
     !
 #ifdef W3_OMPG
     !$OMP END PARALLEL DO
@@ -2185,6 +2305,175 @@ CONTAINS
       END IF
     END DO
     !
+
+! 4.d Peak directions for splits
+!
+! windsea8
+!
+#ifdef W3_OMPG
+    !$OMP PARALLEL DO PRIVATE(JSEA)
+#endif
+!
+    DO JSEA=1, NSEAL
+      ETX(JSEA) = 0.
+      ETY(JSEA) = 0.
+    END DO
+!
+#ifdef W3_OMPG
+    !$OMP END PARALLEL DO
+#endif
+!
+    DO ITH=1, NTH
+!
+#ifdef W3_OMPG
+    !$OMP PARALLEL DO PRIVATE(JSEA,ISEA)
+#endif
+!
+      DO JSEA=1, NSEAL
+#ifdef W3_DIST
+        ISEA   = IAPROC + (JSEA-1)*NAPROC
+#endif
+#ifdef W3_SHRD
+        ISEA   = JSEA
+#endif
+        IF (IKPWS8(JSEA).NE.0) THEN
+          ETX(JSEA) = ETX(JSEA) + A(ITH,IKPWS8(JSEA),JSEA)*ECOS(ITH)
+          ETY(JSEA) = ETY(JSEA) + A(ITH,IKPWS8(JSEA),JSEA)*ESIN(ITH)
+        END IF
+      END DO
+!
+#ifdef W3_OMPG
+    !$OMP END PARALLEL DO
+#endif
+!
+    END DO ! ITH=1,NTH
+!
+#ifdef W3_OMPG
+    !$OMP PARALLEL DO PRIVATE(JSEA,ISEA)
+#endif
+!
+    DO JSEA=1, NSEAL
+#ifdef W3_DIST
+      ISEA   = IAPROC + (JSEA-1)*NAPROC
+#endif
+#ifdef W3_SHRD
+      ISEA   = JSEA
+#endif
+      IF ( ABS(ETX(JSEA))+ABS(ETY(JSEA)) .GT. 1.E-7 .AND.           &
+           WS8TP(JSEA).NE.UNDEF )                                     &
+           WS8DP(JSEA) = ATAN2(ETY(JSEA),ETX(JSEA))
+      IF ( WS8DP(JSEA) .NE. UNDEF ) THEN
+        WS8DP(JSEA) = MOD ( 630-RADE*WS8DP(JSEA) , 360. )
+      END IF
+      ETX(JSEA) = 0.
+      ETY(JSEA) = 0.
+      IKP0(JSEA) = MAX ( 1 , IKP0(JSEA) )
+    END DO
+!
+#ifdef W3_OMPG
+    !$OMP PARALLEL DO PRIVATE(JSEA,ISEA,IX,IY)
+#endif
+!
+! swell8
+!
+#ifdef W3_OMPG
+    !$OMP PARALLEL DO PRIVATE(JSEA)
+#endif
+!
+    DO JSEA=1, NSEAL
+      ETX(JSEA) = 0.
+      ETY(JSEA) = 0.
+    END DO
+!
+#ifdef W3_OMPG
+    !$OMP END PARALLEL DO
+#endif
+!
+    DO ITH=1, NTH
+!
+#ifdef W3_OMPG
+      !$OMP PARALLEL DO PRIVATE(JSEA,ISEA)
+#endif
+!
+      DO JSEA=1, NSEAL
+#ifdef W3_DIST
+        ISEA   = IAPROC + (JSEA-1)*NAPROC
+#endif
+#ifdef W3_SHRD
+        ISEA   = JSEA
+#endif
+        IF (IKPSW8(JSEA).NE.0) THEN
+          ETX(JSEA) = ETX(JSEA) + A(ITH,IKPSW8(JSEA),JSEA)*ECOS(ITH)
+          ETY(JSEA) = ETY(JSEA) + A(ITH,IKPSW8(JSEA),JSEA)*ESIN(ITH)
+        END IF
+      END DO
+!
+#ifdef W3_OMPG
+    !$OMP END PARALLEL DO
+#endif
+!
+    END DO !ITH=1, NTH
+!
+#ifdef W3_OMPG
+    !$OMP PARALLEL DO PRIVATE(JSEA,ISEA)
+#endif
+!
+    DO JSEA=1, NSEAL
+#ifdef W3_DIST
+      ISEA   = IAPROC + (JSEA-1)*NAPROC
+#endif
+#ifdef W3_SHRD
+      ISEA   = JSEA
+#endif
+      IF ( ABS(ETX(JSEA))+ABS(ETY(JSEA)) .GT. 1.E-7 .AND.           &
+           SW8TP(JSEA).NE.UNDEF )                                   &
+           SW8DP(JSEA) = ATAN2(ETY(JSEA),ETX(JSEA))
+      IF ( SW8DP(JSEA) .NE. UNDEF ) THEN
+        SW8DP(JSEA) = MOD ( 630-RADE*SW8DP(JSEA) , 360. )
+      END IF
+      ETX(JSEA) = 0.
+      ETY(JSEA) = 0.
+      IKP0(JSEA) = MAX ( 1 , IKP0(JSEA) )
+    END DO
+!
+#ifdef W3_OMPG
+    !$OMP PARALLEL DO PRIVATE(JSEA,ISEA,IX,IY)
+#endif
+!
+    DO JSEA =1, NSEAL
+      ISEA   = IAPROC + (JSEA-1)*NAPROC
+      IX          = MAPSF(ISEA,1)
+      IY          = MAPSF(ISEA,2)
+      IF ( MAPSTA(IY,IX) .LE. 0 ) THEN
+        SW8HS (JSEA) = UNDEF
+        SW8DP (JSEA) = UNDEF
+        SW8TP (JSEA) = UNDEF
+        WS8HS (JSEA) = UNDEF
+        WS8DP (JSEA) = UNDEF
+        WS8TP (JSEA) = UNDEF
+      END IF
+    END DO
+!
+#ifdef W3_OMPG
+    !$OMP END PARALLEL DO
+#endif
+!
+#ifdef W3_OMPG
+    !$OMP PARALLEL DO PRIVATE(ISEA,JSEA)
+#endif
+!
+    DO JSEA=1, NSEAL
+#ifdef W3_DIST
+      ISEA   = IAPROC + (JSEA-1)*NAPROC
+#endif
+#ifdef W3_SHRD
+      ISEA   = JSEA
+#endif
+      IF ( ABS(ETX(JSEA))+ABS(ETY(JSEA)) .GT. 1.E-7 .AND.           &
+           FP0(JSEA) .NE. UNDEF )                                   &
+           THP0(JSEA) = ATAN2(ETY(JSEA),ETX(JSEA))
+    END DO
+!
 #ifdef W3_OMPG
     !$OMP END PARALLEL DO
 #endif
@@ -2212,7 +2501,7 @@ CONTAINS
     END DO
 #endif
     !
-    ! 6.  Fill arrays wth partitioned data
+    ! 6.  Fill arrays with partitioned data
     !
     IF ( FLPART ) THEN
       !
@@ -2357,7 +2646,7 @@ CONTAINS
   !>
   !> @param[inout] INXOUT  Test string for read/write.
   !> @param[inout] NDSOG   File unit number.
-  !> @param[inout] IOTST   Test indictor for reading.
+  !> @param[inout] IOTST   Test indicator for reading.
   !> @param[inout] IMOD    Model number for W3GDAT etc.
   !>
   !> @author H. L. Tolman  @date 22-Mar-2021
@@ -2415,7 +2704,7 @@ CONTAINS
     !       INXOUT  C*(*)  I   Test string for read/write, valid are:
     !                          'READ' and 'WRITE'.
     !       NDSOG   Int.   I   File unit number.
-    !       IOTST   Int.   O   Test indictor for reading.
+    !       IOTST   Int.   O   Test indicator for reading.
     !                           0 : Fields read.
     !                          -1 : Past end of file.
     !       IMOD    Int.   I   Model number for W3GDAT etc.
@@ -2430,9 +2719,9 @@ CONTAINS
     !      Name      Type  Module   Description
     !     ----------------------------------------------------------------
     !      W3WAVE    Subr. W3WAVEMD Actual wave model routine.
-    !      WW3_OUTF  Prog.   N/A    Ouput postprocessor.
-    !      WW3_GRIB  Prog.   N/A    Ouput postprocessor.
-    !      GX_OUTF   Prog.   N/A    Ouput postprocessor.
+    !      WW3_OUTF  Prog.   N/A    Output postprocessor.
+    !      WW3_GRIB  Prog.   N/A    Output postprocessor.
+    !      GX_OUTF   Prog.   N/A    Output postprocessor.
     !     ----------------------------------------------------------------
     !
     !  6. Error messages :
@@ -2448,7 +2737,7 @@ CONTAINS
     !       components, but converted to magnitude and direction in most
     !       gridded and point output post-processors (except gx_outf).
     !     - All written direction are in degrees, nautical convention,
-    !       but in reading, all is convered back to radians and cartesian
+    !       but in reading, all is converted back to radians and cartesian
     !       conventions.
     !     - Before writing, wind and current directions are converted,
     !       wave directions are already in correct convention (see W3OUTG).
@@ -2495,7 +2784,8 @@ CONTAINS
          CFLXYMAX, CFLTHMAX, CFLKMAX, P2SMS, US3D,    &
          TH1M, STH1M, TH2M, STH2M, HSIG, PHICE, TAUICE,&
          STMAXE, STMAXD, HMAXE, HCMAXE, HMAXD, HCMAXD,&
-         USSP, TAUOCX, TAUOCY
+         USSP, TAUOCX, TAUOCY, WS8HS, SW8HS, SW8TP,   &
+         SW8DP, WS8TP, WS8DP
     !/
     USE W3ODATMD, ONLY: NOGRP, NGRPP, IDOUT, UNDEF, NDST, NDSE,     &
          FLOGRD, IPASS => IPASS1, WRITE => WRITE1,   &
@@ -2798,6 +3088,12 @@ CONTAINS
           IF ( FLOGRD( 4,15) ) PEP (ISEA,:) = UNDEF
           IF ( FLOGRD( 4,16) ) PWST(ISEA  ) = UNDEF
           IF ( FLOGRD( 4,17) ) PNR (ISEA  ) = UNDEF
+          IF ( FLOGRD( 4,18) ) WS8HS (ISEA  ) = UNDEF
+          IF ( FLOGRD( 4,19) ) SW8HS (ISEA  ) = UNDEF
+          IF ( FLOGRD( 4,20) ) WS8TP (ISEA  ) = UNDEF
+          IF ( FLOGRD( 4,21) ) SW8TP (ISEA  ) = UNDEF
+          IF ( FLOGRD( 4,22) ) WS8DP (ISEA  ) = UNDEF
+          IF ( FLOGRD( 4,23) ) SW8DP (ISEA  ) = UNDEF
           !
           IF ( FLOGRD( 5, 2) ) CHARN (ISEA) = UNDEF
           IF ( FLOGRD( 5, 3) ) CGE   (ISEA) = UNDEF
@@ -3090,6 +3386,18 @@ CONTAINS
               WRITE ( NDSOG ) PWST(1:NSEA)
             ELSE IF ( IFI .EQ. 4 .AND. IFJ .EQ. 17 ) THEN
               WRITE ( NDSOG ) PNR(1:NSEA)
+            ELSE IF ( IFI .EQ. 4 .AND. IFJ .EQ. 18 ) THEN
+              WRITE ( NDSOG ) WS8HS(1:NSEA)
+            ELSE IF ( IFI .EQ. 4 .AND. IFJ .EQ. 19 ) THEN
+              WRITE ( NDSOG ) SW8HS(1:NSEA)
+            ELSE IF ( IFI .EQ. 4 .AND. IFJ .EQ. 20 ) THEN
+              WRITE ( NDSOG ) WS8TP(1:NSEA)
+            ELSE IF ( IFI .EQ. 4 .AND. IFJ .EQ. 21 ) THEN
+              WRITE ( NDSOG ) SW8TP(1:NSEA)
+            ELSE IF ( IFI .EQ. 4 .AND. IFJ .EQ. 22 ) THEN
+              WRITE ( NDSOG ) WS8DP(1:NSEA)
+            ELSE IF ( IFI .EQ. 4 .AND. IFJ .EQ. 23 ) THEN
+              WRITE ( NDSOG ) SW8DP(1:NSEA)
               !
               !     Section 5)
               !
@@ -3411,6 +3719,24 @@ CONTAINS
                    PWST(1:NSEA)
             ELSE IF ( IFI .EQ. 4 .AND. IFJ .EQ. 17) THEN
               READ (NDSOG,END=801,ERR=802,IOSTAT=IERR) PNR(1:NSEA)
+            ELSE IF ( IFI .EQ. 4 .AND. IFJ .EQ. 18 ) THEN
+              READ (NDSOG,END=801,ERR=802,IOSTAT=IERR)         &
+                                                    WS8HS(1:NSEA)
+            ELSE IF ( IFI .EQ. 4 .AND. IFJ .EQ. 19 ) THEN
+              READ (NDSOG,END=801,ERR=802,IOSTAT=IERR)         &
+                                                    SW8HS(1:NSEA)
+            ELSE IF ( IFI .EQ. 4 .AND. IFJ .EQ. 20 ) THEN
+              READ (NDSOG,END=801,ERR=802,IOSTAT=IERR)         &
+                                                    WS8TP(1:NSEA)
+            ELSE IF ( IFI .EQ. 4 .AND. IFJ .EQ. 21 ) THEN
+              READ (NDSOG,END=801,ERR=802,IOSTAT=IERR)         &
+                                                    SW8TP(1:NSEA)
+            ELSE IF ( IFI .EQ. 4 .AND. IFJ .EQ. 22 ) THEN
+              READ (NDSOG,END=801,ERR=802,IOSTAT=IERR)         &
+                                                    WS8DP(1:NSEA)
+            ELSE IF ( IFI .EQ. 4 .AND. IFJ .EQ. 23 ) THEN
+              READ (NDSOG,END=801,ERR=802,IOSTAT=IERR)         &
+                                                    SW8DP(1:NSEA)
               !
               !     Section 5)
               !
@@ -3632,23 +3958,23 @@ CONTAINS
     ! Formats
     !
 900 FORMAT (/' *** WAVEWATCH III ERROR IN W3IOGO :'/                &
-         '     ILEGAL INXOUT VALUE: ',A/)
+         '     ILLEGAL INXOUT VALUE: ',A/)
 901 FORMAT (/' *** WAVEWATCH III ERROR IN W3IOGO :'/                &
          '     MIXED READ/WRITE, LAST REQUEST: ',A/)
 902 FORMAT (/' *** WAVEWATCH III ERROR IN W3IOGO :'/                &
-         '     ILEGAL IDSTR, READ : ',A/                        &
+         '     ILLEGAL IDSTR, READ : ',A/                        &
          '                  CHECK : ',A/)
 903 FORMAT (/' *** WAVEWATCH III ERROR IN W3IOGO :'/                &
-         '     ILEGAL VEROGR, READ : ',A/                       &
+         '     ILLEGAL VEROGR, READ : ',A/                       &
          '                   CHECK : ',A/)
 904 FORMAT (/' *** WAVEWATCH III ERROR IN W3IOGO :'/                &
          '     DIFFERENT NUMBER OF FIELDS, FILE :',I8,I8/       &
          '                              PROGRAM :',I8,I8/)
 905 FORMAT (/' *** WAVEWATCH III WARNING IN W3IOGO :'/              &
-         '     ILEGAL GNAME, READ : ',A/                        &
+         '     ILLEGAL GNAME, READ : ',A/                        &
          '                  CHECK : ',A/)
 906 FORMAT (/' *** WAVEWATCH III ERROR IN W3IOGO :'/                &
-         '     ILEGAL NOSWLL, READ : ',I4/                      &
+         '     ILLEGAL NOSWLL, READ : ',I4/                      &
          '                   CHECK : ',I4/)
     !
     !  999 FORMAT (/' *** WAVEWATCH III ERROR IN W3IOGO :'/                &
@@ -3720,14 +4046,14 @@ CONTAINS
     !       Stokes drift profiles external to the wave model.
     !
     !     Option 1: USS_SWITCH == 1
-    !               This method is for outputing the Stokes drift frequency
+    !               This method is for outputting the Stokes drift frequency
     !               spectrum for spectral frequency bands as defined by the
     !               WW3 computation spectral frequency grid.
     !               Output Quantity: Stokes drift frequency spectrum [m/s/Hz]
-    !                                X and Y componenets.
+    !                                X and Y components.
     !
     !     Option 2: USS_SWITCH == 2
-    !               This method is for outputing the surface Stokes drift
+    !               This method is for outputting the surface Stokes drift
     !               for a specified frequency partition/band of the
     !               wave spectrum.  These partitions do not need to be
     !               matched to WW3's computation spectral frequency grid,
@@ -4070,7 +4396,7 @@ CONTAINS
       IF ( MAPSTA(IY,IX) .LE. 0 ) CYCLE
       !
       ! Wind info. is required to select wind sea partition from the wave
-      ! spectrum. Two wind velocities are availabe:
+      ! spectrum. Two wind velocities are available:
       ! - U10 & U10D   (w3adatmd)
       ! - UST & USTDIR (w3wdatmd)
       !     * U10D & USTDIR are not really the same when swell are present.
@@ -4134,7 +4460,7 @@ CONTAINS
       ! * and for XFR = 1.07, the **discrete** peak region becomes
       !     {0.71, 0.76, 0.82, 0.87, 0.93, 1., 1.07, 1.14, 1.23, 1.31}σp.
       !
-      ! Thus, a good approximation to the range [0.7σp, 1.3σp] is guranteed
+      ! Thus, a good approximation to the range [0.7σp, 1.3σp] is guaranteed
       ! by each XFR. I however found using the discrete peak frequency yielded
       ! step-wise results. According to my test, the smoothest results were
       ! obtained with FPOPT = 0. For simplicity, the δσ values (DSII) are

@@ -122,7 +122,7 @@ MODULE W3GRIDMD
   !  1. Purpose :
   !
   !     "Grid" preprocessing subroutine, which writes a model definition
-  !     file containing the model parameter settigs and grid data.
+  !     file containing the model parameter settings and grid data.
   !
   !  2. Method :
   !
@@ -328,7 +328,7 @@ MODULE W3GRIDMD
   !     Because the map-east direction changes with latitude and longitude
   !     the wave spectra defined to the map-east direction could not be
   !     mixed up with the conventional spectra defined to the local east
-  !     direction.  A rotation sub is provided for convertion from one to
+  !     direction.  A rotation sub is provided for conversion from one to
   !     another.  Propagation part will be calculated together, including
   !     the boundary cells.  The boundary cells are then updated by
   !     assigning the corresponding inner cells to them after conversion.
@@ -475,7 +475,7 @@ MODULE W3GRIDMD
   !     !/BS1   Routines from F. Ardhuin.
   !
   !     !/PR1   First order propagation scheme.
-  !     !/PR2   QUICKEST scheme with ULTIMATE limite and diffusion
+  !     !/PR2   QUICKEST scheme with ULTIMATE limit and diffusion
   !             correction for swell dispersion.
   !     !/PR3   Averaging ULTIMATE QUICKEST scheme.
   !
@@ -586,6 +586,19 @@ MODULE W3GRIDMD
        IY2, J, JJ, IXR(4), IYR(4), ISEAI(4),&
        IST, NKI, NTHI, NRIC, NRIS, I, IDFT, &
        NSTAT, NBT, NLAND, NOSW, NMAPB, IMAPB
+  INTEGER                 :: k, bnd_sea_count, thres_sea_count,   &
+                             N_SEA, num_DI1, num_DI2
+  INTEGER,DIMENSION(4)    :: DISTS4_IDX
+  REAL                    :: SMC_DX, SMC_DY, SMC_LON0, SMC_LAT0,           &
+                             dist_i, BND_XP, BND_YP
+  REAL,DIMENSION(4)       :: DISTS4, DW, nearest4_smc_lons, nearest4_smc_lats, &
+                             nearest4_DI
+  INTEGER,ALLOCATABLE     :: SMC_JI(:), SMC_II(:), SMC_DJ(:), SMC_DI(:)
+  REAL,ALLOCATABLE        :: SMC_CN_LONS(:), SMC_CN_LATS(:), DIST_TO_SMC(:)
+  REAL                    :: DIST11, DIST12, DIST21, DIST22,               &
+                             W11, W12, W21, W22, W_SUM_TOT, highest_smc_dx_km, &
+                             highest_smc_dy_km, highest_smc_dist_km
+  LOGICAL                 :: getting_far, RGLGRD
 #ifdef W3_NL2
   INTEGER            :: IDEPTH
 #endif
@@ -1142,6 +1155,12 @@ CONTAINS
 #endif
 #ifdef W3_STAB2
     FLSTB2 = .TRUE.
+#endif
+!
+! Define whether regular or SMC grid
+RGLGRD = .TRUE.
+#ifdef W3_SMC
+  RGLGRD = .FALSE.
 #endif
     !
     !--- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -2639,7 +2658,7 @@ CONTAINS
     ! A b. c. dest. grid with pole at the geographic North must be non-rotated
     DO I=1,9
       IF ( BPLAT(I) == 90. ) THEN
-        ! Require BPLON(I) == -180., but don't blaim the user if BPLON(I) == 180.
+        ! Require BPLON(I) == -180., but don't blame the user if BPLON(I) == 180.
         IF ( BPLON(I) == 180. ) BPLON(I) = -180.
         IF ( BPLON(I) == -180. ) CYCLE
       END IF
@@ -3065,7 +3084,7 @@ CONTAINS
       NOSWLL = 1  ! Only ever one swell
     ELSE
       WRITE( NDSE, * )                                                &
-           "*** Error - unknown partitioing method (PTM)! ***"
+           "*** Error - unknown partitioning method (PTM)! ***"
       CALL EXIT(1)
     ENDIF
 
@@ -3270,7 +3289,7 @@ CONTAINS
            JGS_TERMINATE_DIFFERENCE,                   &
            JGS_TERMINATE_NORM,                         &
            JGS_LIMITER,                                &
-           JGS_LIMITER_FUNC,                           & 
+           JGS_LIMITER_FUNC,                           &
            JGS_USE_JACOBI,                             &
            JGS_BLOCK_GAUSS_SEIDEL,                     &
            JGS_MAXITER,                                &
@@ -3607,7 +3626,7 @@ CONTAINS
       END SELECT
 
       IF (FSTOTALIMP .or. FSTOTALEXP) THEN
-        LPDLIB = .TRUE. 
+        LPDLIB = .TRUE.
       ENDIF
       !
       IF (SUM(UNSTSCHEMES).GT.1) WRITE(NDSO,1035)
@@ -4235,7 +4254,7 @@ CONTAINS
       WRITE (NDSO,4012) NCObst, (IJKObstr(ix, NCObst), ix=1,JObs)
       WRITE (NDSO,*) ' '
 
-      !!Li     Bounary cell sequential numbers are read only if NBISMC>0
+      !!Li     Boundary cell sequential numbers are read only if NBISMC>0
       IF( NBISMC .GT. 0 ) THEN
         IF (FLGNML) THEN
           NDSTR = NML_SMC%BUNDY%IDF
@@ -4950,7 +4969,7 @@ CONTAINS
       WRITE (NDSO,*) ' '
 
       !Li    Boundary -9 to 0 cells for cell x-size 2**n
-      !Li    Note the position indice for bounary cell are not used.
+      !Li    Note the position indice for boundary cell are not used.
       IJKCel(1, -9:0)=0
       !Li    Use Equator Y index for boundary cells.  JGLi04Apr2011
       !Li   IJKCel(2, -9:0)=0
@@ -5325,7 +5344,7 @@ CONTAINS
     END IF
 #ifdef W3_REF1
     !
-    !  9.a Reads shoreline slope  (whith REF1 switch only)
+    !  9.a Reads shoreline slope  (with REF1 switch only)
     !
     ALLOCATE ( REFD(NX,NY), REFD2(NX,NY), REFS(NX,NY) )
     IF (REFMAP.EQ.0) THEN
@@ -5677,7 +5696,7 @@ CONTAINS
           IF ( NPO .EQ. 0 ) EXIT
           !
           NFBPO  = NFBPO + 1
-          IF ( NFBPO .GT. 9 ) THEN
+          IF ( NFBPO .GT. 99 ) THEN
             WRITE (NDSE,1006)
             CALL EXTCDE ( 50 )
           END IF
@@ -5702,6 +5721,31 @@ CONTAINS
 #endif
 #ifdef W3_T
         WRITE (NDST,9090)
+#endif
+#ifdef W3_SMC
+!
+        SMC_DX = FACTOR*SX/4
+        SMC_DY = FACTOR*SY/4
+        SMC_LON0 = (FACTOR*X0) - (SMC_DX*2)
+        SMC_LAT0 = (FACTOR*Y0) - (SMC_DY*2)
+        WRITE(*,*) 'SMC_LON0, SMC_LAT0 = ', SMC_LON0, SMC_LAT0
+!
+        ALLOCATE( SMC_JI(NCel) )
+        ALLOCATE( SMC_II(NCel) )
+        ALLOCATE( SMC_DJ(NCel) )
+        ALLOCATE( SMC_DI(NCel) )
+        SMC_JI = IJKCel(1,1:NCel)
+        SMC_II = IJKCel(2,1:NCel)
+        SMC_DJ = IJKCel(3,1:NCel)
+        SMC_DI = IJKCel(4,1:NCel)
+!
+        ALLOCATE( SMC_CN_LONS(NCel) )
+        ALLOCATE( SMC_CN_LATS(NCel) )
+        DO I=1,NCel
+            SMC_CN_LONS(I) = SMC_LON0 + (SMC_JI(I) + 0.5*SMC_DJ(I))*SMC_DX
+            SMC_CN_LATS(I) = SMC_LAT0 + (SMC_II(I) + 0.5*SMC_DI(I))*SMC_DY
+        END DO
+!
 #endif
         !
         DO IP=1, NPO
@@ -5765,6 +5809,123 @@ CONTAINS
           !
           INGRID = W3GRMP( GSU, XO, YO, IXR, IYR, RD )
           !
+#ifdef W3_SMC
+          !!EEchevarria
+          ! ... Compute distances from point BND_XP, BND_YP to all SMC nodes
+          !
+          BND_XP = XO
+          BND_YP = YO
+          IF ( BND_XP .LT. 0 ) BND_XP = BND_XP + 360.0
+          WRITE(*,*) 'BND_XP, BND_YP = ', BND_XP, BND_YP
+          !
+          N_SEA = SIZE(SMC_CN_LONS)
+          ALLOCATE( DIST_TO_SMC(N_SEA) )
+          !
+          DO I=1,N_SEA
+              CALL haversine(BND_YP, BND_XP, SMC_CN_LATS(I), SMC_CN_LONS(I), dist_i)
+              DIST_TO_SMC(I) = dist_i
+          END DO
+          !
+          DO I=1,4
+              k = 1
+              DISTS4(I) = DIST_TO_SMC(k)
+              DISTS4_IDX(I) = k
+              nearest4_smc_lons(I) = SMC_CN_LONS(k)
+              nearest4_smc_lats(I) = SMC_CN_LATS(k)
+              nearest4_DI(I) = SMC_DI(k)
+          !
+              DO J=2,N_SEA
+                  IF ( (DIST_TO_SMC(J) .LT. DISTS4(I)) ) THEN
+                      k = J
+                      DISTS4(I) = DIST_TO_SMC(k)
+                      DISTS4_IDX(I) = k
+                      nearest4_smc_lons(I) = SMC_CN_LONS(k)
+                      nearest4_smc_lats(I) = SMC_CN_LATS(k)
+                      nearest4_DI(I)       = SMC_DI(k)
+                END IF
+              END DO ! J=2,N_SEA
+          !
+              DIST_TO_SMC(k) = 1000000000.0 ! mark selected value so it won't be selected again
+          !
+          END DO ! I=1,4
+          !
+          !
+          WRITE(*,*) 'surrounding SMC lons = ', (nearest4_smc_lons(I), I=1,4)
+          WRITE(*,*) 'surrounding SMC lats = ', (nearest4_smc_lats(I), I=1,4)
+          WRITE(*,*) 'surrounding points distance = ', DISTS4
+          !
+          num_DI1=0
+          num_DI2=0
+          DO J=1,4
+              IF (nearest4_DI(J) .EQ. 1) num_DI1 = num_DI1+1
+              IF (nearest4_DI(J) .EQ. 2) num_DI2 = num_DI2+1
+          END DO
+          !
+          CALL haversine(SMC_CN_LATS(DISTS4_IDX(1)), SMC_CN_LONS(DISTS4_IDX(1)), BND_YP, BND_XP, DIST11)
+          CALL haversine(SMC_CN_LATS(DISTS4_IDX(2)), SMC_CN_LONS(DISTS4_IDX(2)), BND_YP, BND_XP, DIST12)
+          CALL haversine(SMC_CN_LATS(DISTS4_IDX(3)), SMC_CN_LONS(DISTS4_IDX(3)), BND_YP, BND_XP, DIST21)
+          CALL haversine(SMC_CN_LATS(DISTS4_IDX(4)), SMC_CN_LONS(DISTS4_IDX(4)), BND_YP, BND_XP, DIST22)
+          !
+          !           !
+          !           ! Check if bnd point BND_XP, BND_XP is "to the right", "to the left", etc
+          !           ! of all nearest 4 points. In that case is getting in land,
+          !           ! and we can be more strict with the criterion for interpolation
+          !           !
+          highest_smc_dx_km = 6372*(3.14159265359/180)*COS(BND_YP*ATAN(1.0)/45)*SMC_DX*4
+          highest_smc_dy_km = 6372*(3.14159265359/180)*SMC_DY*4
+          highest_smc_dist_km = SQRT((highest_smc_dx_km**2)+(highest_smc_dy_km**2))
+          !
+          getting_far = .FALSE.
+          IF ( ALL(nearest4_smc_lons .LE. BND_XP ) .AND. &
+              ALL(DISTS4 .GE. highest_smc_dist_km/2) ) getting_far = .TRUE.
+          IF ( ALL(nearest4_smc_lons .GE. BND_XP ) .AND. &
+              ALL(DISTS4 .GE. highest_smc_dist_km/2) ) getting_far = .TRUE.
+          IF ( ALL(nearest4_smc_lats .LE. BND_YP ) .AND. &
+              ALL(DISTS4 .GE. highest_smc_dist_km/2) ) getting_far = .TRUE.
+          IF ( ALL(nearest4_smc_lats .GE. BND_YP ) .AND. &
+              ALL(DISTS4 .GE. highest_smc_dist_km/2) ) getting_far = .TRUE.
+          WRITE(*,*) 'getting_far --> ', getting_far
+          !           !
+          !
+          !
+          !           ! -------------- COMPUTE INTERPOLATION WEIGHTS FOR BND POINTS --------------
+          !           ! Check if XT, YT is very very close to cn_lon, cn_lat (i.e., target
+          !           ! point is grid point): If it is, assign that weight to 1 and the rest to 0.
+          !           ! Otherwise, the weight is 1/dist**2
+          !
+          IF ( ABS(DIST11) .GT. 0.1 ) THEN
+              W11 = 1/(DIST11**2)
+          ELSE
+              W11=1.0; W12=0.0; W21=0.0; W22=0.0
+          ENDIF
+          IF ( ABS(DIST12) .GT. 0.1 ) THEN
+              W12 = 1/(DIST12**2)
+          ELSE
+              W11=0.0; W12=1.0; W21=0.0; W22=0.0
+          ENDIF
+          IF ( ABS(DIST21) .GT. 0.1 ) THEN
+              W21 = 1/(DIST21**2)
+          ELSE
+              W11=0.0; W12=0.0; W21=1.0; W22=0.0
+          ENDIF
+          IF ( ABS(DIST22) .GT. 0.1 ) THEN
+              W22 = 1/(DIST22**2)
+          ELSE
+              W11=0.0; W12=0.0; W21=0.0; W22=1.0
+          ENDIF
+          !
+          W_SUM_TOT = W11+W12+W21+W22
+          !
+          DW(1) = W11/W_SUM_TOT
+          DW(2) = W12/W_SUM_TOT
+          DW(3) = W21/W_SUM_TOT
+          DW(4) = W22/W_SUM_TOT
+          !
+          RD = DW
+          !
+          DEALLOCATE( DIST_TO_SMC ) ! Don't need it anymore
+          !
+#endif
           !           Change cell-corners from counter-clockwise to column-major order
           IX     = IXR(3);  IY     = IYR(3);  X     = RD(3);
           IXR(3) = IXR(4);  IYR(3) = IYR(4);  RD(3) = RD(4);
@@ -5779,16 +5940,58 @@ CONTAINS
           !
           IF ( INGRID ) THEN
             !
-            ! ... Check if point not on land
+            ! ... Check if point not "on land" (what this means depends on whether regular grid or SMC)
             !
-            IF ( ( MAPSTA(IYR(1),IXR(1)).GT.0 .AND.                 &
-                 RD(1).GT.0.05 ) .OR.          &
-                 ( MAPSTA(IYR(2),IXR(2)).GT.0 .AND.                 &
-                 RD(2).GT.0.05 ) .OR.          &
-                 ( MAPSTA(IYR(3),IXR(3)).GT.0 .AND.                 &
-                 RD(3).GT.0.05 ) .OR.          &
-                 ( MAPSTA(IYR(4),IXR(4)).GT.0 .AND.                 &
-                 RD(4).GT.0.05 ) ) THEN
+            IF ( RGLGRD ) THEN
+                bnd_sea_count=0
+                DO J=1, 4
+                    IF ( MAPSTA(IYR(J),IXR(J)) .GT. 0 ) THEN
+                        bnd_sea_count = bnd_sea_count + 1
+                    END IF
+                END DO
+            WRITE(*,*) 'XO, YO, bnd_sea_count = ', XO, YO, bnd_sea_count
+            thres_sea_count = 2
+            END IF
+#ifdef W3_SMC
+            bnd_sea_count=0
+            IF ( getting_far .EQ. .FALSE. ) THEN
+                IF ( num_DI1 .EQ. 3 ) THEN
+                    DO J=1, 4
+                        IF ( DISTS4(J) .LE. highest_smc_dist_km/2.5 ) THEN
+                            bnd_sea_count = bnd_sea_count + 1
+                        END IF
+                    END DO
+                ELSE IF ( num_DI1 .EQ. 4 ) THEN
+                    DO J=1, 4
+                        IF ( DISTS4(J) .LE. highest_smc_dist_km/3 ) THEN
+                            bnd_sea_count = bnd_sea_count + 1
+                        END IF
+                    END DO
+                ELSE IF ( num_DI2 .EQ. 3 ) THEN
+                    DO J=1, 4
+                        IF ( DISTS4(J) .LE. highest_smc_dist_km/1.25 ) THEN
+                            bnd_sea_count = bnd_sea_count + 1
+                        END IF
+                    END DO
+                ELSE IF ( num_DI2 .EQ. 4 ) THEN
+                    DO J=1, 4
+                        IF ( DISTS4(J) .LE. highest_smc_dist_km/1.5 ) THEN
+                            bnd_sea_count = bnd_sea_count + 1
+                        END IF
+                    END DO
+                ELSE
+                    DO J=1, 4
+                        IF ( DISTS4(J) .LE. highest_smc_dist_km ) THEN
+                            bnd_sea_count = bnd_sea_count + 1
+                        END IF
+                    END DO
+                END IF
+            END IF ! getting_far .EQ. False
+            !
+            WRITE(*,*) 'bnd_sea_count = ', bnd_sea_count
+            thres_sea_count = 3
+#endif
+            IF ( bnd_sea_count .GE. thres_sea_count ) THEN
               !
               ! ... Check storage and store coordinates
               !
@@ -5807,21 +6010,44 @@ CONTAINS
               YBPO(NBOTOT) = YO
               !
               ! ... Interpolation factors
+              ! EEchevarria: If regular grid: use MAPSTA; if SMC: use highest_smc_dist_km
               !
+              IF ( RGLGRD ) THEN
+                RDTOT = 0.
+                DO J=1, 4
+                  IF ( MAPSTA(IYR(J),IXR(J)).GT.0 .AND.               &
+                       RD(J).GT.0.05 ) THEN
+                    RDBPO(NBOTOT,J) = RD(J)
+                  ELSE
+                    RDBPO(NBOTOT,J) = 0.
+                  END IF
+                  RDTOT = RDTOT + RDBPO(NBOTOT,J)
+                END DO
+              END IF
+              !
+#ifdef W3_SMC
               RDTOT = 0.
               DO J=1, 4
-                IF ( MAPSTA(IYR(J),IXR(J)).GT.0 .AND.               &
-                     RD(J).GT.0.05 ) THEN
+                IF ( (DISTS4(J) .LE. highest_smc_dist_km) .AND.   &
+                      RD(J).GT.0.01 ) THEN
                   RDBPO(NBOTOT,J) = RD(J)
                 ELSE
                   RDBPO(NBOTOT,J) = 0.
                 END IF
                 RDTOT = RDTOT + RDBPO(NBOTOT,J)
               END DO
-              !
-              DO J=1, 4
-                RDBPO(NBOTOT,J) = RDBPO(NBOTOT,J) / RDTOT
-              END DO
+#endif
+! ... Normalise interpolation weights, if one of them is zero, the rest get updated
+!
+              IF (RDTOT .LT. 1E-10) THEN
+                DO J=1, 4
+                  RDBPO(NBOTOT,J) = 0
+                END DO
+              ELSE
+                DO J=1, 4
+                  RDBPO(NBOTOT,J) = RDBPO(NBOTOT,J) / RDTOT
+                END DO
+              END IF
               !
 #ifdef W3_T
               WRITE (NDST,9092) RDTOT, (RDBPO(NBOTOT,J),J=1,4)
@@ -5830,7 +6056,10 @@ CONTAINS
               ! ... Determine sea and interpolation point counters
               !
               DO J=1, 4
-                ISEAI(J) = MAPFS(IYR(J),IXR(J))
+                IF ( RGLGRD ) ISEAI(J) = MAPFS(IYR(J),IXR(J))
+#ifdef W3_SMC
+                ISEAI(J) = DISTS4_IDX(J)
+#endif
               END DO
               !
               DO J=1, 4
@@ -5858,25 +6087,67 @@ CONTAINS
               !
               ! ... Error output
               !
-            ELSE
-              IF ( FLAGLL ) THEN
-                WRITE (NDSE,2995) FACTOR*XO, FACTOR*YO
-              ELSE
-                WRITE (NDSE,995) FACTOR*XO, FACTOR*YO
-              END IF
-            END IF
-          ELSE
+            ELSE ! bnd_sea_count.GE.3
+              NBOTOT = NBOTOT + 1
+              IF ( ILOOP .EQ. 1 ) CYCLE
+!
+              XBPO(NBOTOT) = XO
+              YBPO(NBOTOT) = YO
+!
+              RDTOT = 0.
+              DO J=1, 4
+                  RDBPO(NBOTOT,J) = 0
+                  RDTOT = RDTOT + RDBPO(NBOTOT,J)
+              END DO
+!
+              DO J=1, 4
+                IF ( RGLGRD ) ISEAI(J) = MAPFS(IYR(J),IXR(J))
+#ifdef W3_SMC
+                ISEAI(J) = DISTS4_IDX(J)
+#endif
+              END DO
+!
+              DO J=1, 4
+                IF ( ISEAI(J).EQ.0 .OR. RDBPO(NBOTOT,J).EQ. 0. ) THEN
+                    IPBPO(NBOTOT,J) = 0
+                ELSE
+                    FLNEW   = .TRUE.
+                    DO IST=NBO2(NFBPO-1)+1, NBO2(NFBPO)
+                      IF ( ISEAI(J) .EQ. ISBPO(IST) ) THEN
+                          FLNEW  = .FALSE.
+                          IPBPO(NBOTOT,J) = IST - NBO2(NFBPO-1)
+                      END IF
+                    END DO
+                    IF ( FLNEW ) THEN
+                        NBO2(NFBPO)        = NBO2(NFBPO) + 1
+                        IPBPO(NBOTOT,J)    = NBO2(NFBPO) - NBO2(NFBPO-1)
+                        ISBPO(NBO2(NFBPO)) = ISEAI(J)
+                    END IF
+                END IF
+              END DO ! J=1,4
+            !
+            END IF ! bnd_sea_count.GE.3
+          !
+          ELSE ! ingrid
             IF ( FLAGLL ) THEN
               WRITE (NDSE,2994) FACTOR*XO, FACTOR*YO
             ELSE
               WRITE (NDSE,994) FACTOR*XO, FACTOR*YO
             END IF
-          END IF
+          END IF ! is in grid
           !
-        END DO
+        END DO ! IP=1, NPO
         !
         NBO(NFBPO) = NBOTOT
         !
+#ifdef W3_SMC
+        DEALLOCATE( SMC_CN_LONS )
+        DEALLOCATE( SMC_CN_LATS )
+        DEALLOCATE( SMC_JI )
+        DEALLOCATE( SMC_II )
+        DEALLOCATE( SMC_DJ )
+        DEALLOCATE( SMC_DI )
+#endif
         ! ... Branch back to read.
         !
       END DO
@@ -6808,7 +7079,7 @@ CONTAINS
 4018 FORMAT ( '       IJKUFc(7,NAUI) read from ', A)
 4019 FORMAT ( '       ARC NAVJ   = ',6I9)
 4020 FORMAT ( '       IJKVFc(8,NAVJ) read from ', A)
-4021 FORMAT ( '       Varables by W3DIMX NCel = ',I9)
+4021 FORMAT ( '       Variables by W3DIMX NCel = ',I9)
 4022 FORMAT ( '       Defined NLvCel ',6I9)
 4023 FORMAT ( '       Defined NLvUFc ',6I9)
 4024 FORMAT ( '       Defined NLvVFc ',6I9)
@@ -7093,6 +7364,27 @@ CONTAINS
 #endif
 
   END SUBROUTINE W3GRID
+!
+  SUBROUTINE haversine(deglat1, deglon1, deglat2, deglon2, dist)
+        ! Great circle distance calculator
+        REAL, INTENT(IN) :: deglat1, deglon1, deglat2, deglon2
+        REAL, INTENT(OUT) :: dist
+        REAL             :: h_a, h_c, h_dist, h_dlat, h_dlon, h_lat1, h_lat2
+        REAL, PARAMETER  :: radius = 6372.8
+        REAL, PARAMETER  :: deg_to_rad = ATAN(1.0)/45
+
+        h_dlat = (deglat2-deglat1)*deg_to_rad
+        h_dlon = (deglon2-deglon1)*deg_to_rad
+        h_lat1 = deglat1*deg_to_rad
+        h_lat2 = deglat2*deg_to_rad
+
+        h_a = (SIN(h_dlat/2))**2 + COS(h_lat1)*COS(h_lat2)*(SIN(h_dlon/2))**2
+
+        h_c = 2*ASIN(SQRT(h_a))
+        dist = radius*h_c
+
+  END SUBROUTINE haversine
+!
   !/
   !/ Internal function READNL ------------------------------------------ /
   !/

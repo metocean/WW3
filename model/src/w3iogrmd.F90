@@ -175,7 +175,7 @@ CONTAINS
     !/    29-May-2014 : Add IC3 parameters                  ( version 5.01 )
     !/    20-Aug-2016 : Add IOBPA                           ( version 5.12 )
     !/    08-Mar-2018 : Add FSWND for SMC grid.             ( version 6.02 )
-    !/    05-Jun-2018 : Add PDLIB/DEBUGINIT and implcit scheme parameters
+    !/    05-Jun-2018 : Add PDLIB/DEBUGINIT and implicit scheme parameters
     !/                  for unstructured grids              ( version 6.04 )
     !/    27-Jul-2018 : Added PTMETH and PTFCUT parameters  ( version 6.05 )
     !/                  (C. Bunney, UKMO)
@@ -629,9 +629,9 @@ CONTAINS
              WRITE (NDSE,902) VERTST, VERGRD
         CALL EXTCDE ( 11 )
       END IF
-      IF ( NFBPO .GT. 9 ) THEN
+      IF ( NFBPO .GT. 99 ) THEN
         IF ( IAPROC .EQ. NAPERR )                               &
-             WRITE (NDSE,904) NFBPO, 9
+             WRITE (NDSE,904) NFBPO, 99
         CALL EXTCDE ( 13 )
       END IF
       IF ( FNAME0 .NE. TNAME0 ) THEN
@@ -749,7 +749,7 @@ CONTAINS
         !Init COUNTCON and IOBDP to zero, it needs to be set somewhere or
         !removed
         COUNTCON=0
-        IOBDP=0  
+        IOBDP=0
         WRITE (NDSM)                                          &
              X0, Y0, SX, SY, DXYMAX, XGRD, YGRD, TRIGP, TRIA, &
              LEN, IEN, ANGLE0, ANGLE, SI, MAXX, MAXY,         &
@@ -1568,15 +1568,15 @@ CONTAINS
     ! Formats
     !
 900 FORMAT (/' *** WAVEWATCH III ERROR IN W3IOGR :'/         &
-         '     ILEGAL INXOUT VALUE: ',A/)
+         '     ILLEGAL INXOUT VALUE: ',A/)
 901 FORMAT (/' *** WAVEWATCH III ERROR IN W3IOGR :'/         &
-         '     ILEGAL IDSTR, READ : ',A/                     &
+         '     ILLEGAL IDSTR, READ : ',A/                     &
          '                  CHECK : ',A/)
 902 FORMAT (/' *** WAVEWATCH III ERROR IN W3IOGR :'/         &
-         '     ILEGAL VERGRD, READ : ',A/                    &
+         '     ILLEGAL VERGRD, READ : ',A/                    &
          '                   CHECK : ',A/)
 904 FORMAT (/' *** WAVEWATCH III ERROR IN W3IOGR :'/         &
-         '     ILEGAL NFBPO READ : ',I8/                     &
+         '     ILLEGAL NFBPO READ : ',I8/                     &
          '                 CHECK : ',I8/)
 905 FORMAT (/' *** WAVEWATCH III ERROR IN W3IOGR :'/         &
          '     UNEXPECTED SOURCE TERM IDENTIFIER',I2/        &

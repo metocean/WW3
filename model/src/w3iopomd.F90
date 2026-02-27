@@ -271,7 +271,7 @@ CONTAINS
     !/ Local parameters
     !/
     LOGICAL                 :: INGRID
-    INTEGER                 :: IPT, J, K
+    INTEGER                 :: IPT, J, K, NN
     INTEGER                 :: IX1, IY1, IXS, IYS
 #ifdef W3_S
     INTEGER, SAVE           :: IENT = 0
@@ -312,7 +312,9 @@ CONTAINS
     END IF
     !
     CALL W3DMO2 ( IMOD, NDSE, NDST, NPT )
-    GRDID  = FILEXT
+    DO NN=1, NPT
+        GRDID(NN) = FILEXT
+    END DO
     !
     NOPTS  = 0
     !
@@ -563,17 +565,17 @@ CONTAINS
     !
 1000 FORMAT (/' *** WAVEWATCH-III WARNING :'/                   &
          '     OUTPUT POINT OUT OF GRID : ',2F10.3,2X,A/   &
-         '     POINT SKIPPPED '/)
+         '     POINT SKIPPED '/)
 1001 FORMAT (/' *** WAVEWATCH-III WARNING :'/                   &
          '     OUTPUT POINT OUT OF GRID : ',2E10.3,2X,A/   &
-         '     POINT SKIPPPED '/)
+         '     POINT SKIPPED '/)
     !
 1002 FORMAT (/' *** WAVEWATCH-III WARNING :'/                   &
          '     OUTPUT POINT ON LAND : ',2F10.3,2X,A/       &
-         '     POINT SKIPPPED '/)
+         '     POINT SKIPPED '/)
 1003 FORMAT (/' *** WAVEWATCH-III WARNING :'/                   &
          '     OUTPUT POINT ON LAND : ',2E10.3,2X,A/       &
-         '     POINT SKIPPPED '/)
+         '     POINT SKIPPED '/)
     !
 #ifdef W3_T
 9010 FORMAT (' TEST W3IOPP : INPUT  : ',I4,2F12.2,2X,A)
@@ -1029,7 +1031,7 @@ CONTAINS
   !>
   !> @param[in]  INXOUT  Test string for read/write.
   !> @param[in]  NDSOP   File unit number.
-  !> @param[out] IOTST   Test indictor for reading.
+  !> @param[out] IOTST   Test indicator for reading.
   !> @param[in]  IMOD    Model number for W3GDAT etc.
   !>
   !> @author H. L. Tolman  @date 25-Jul-2006
@@ -1063,7 +1065,7 @@ CONTAINS
     !       INXOUT  C*(*)  I   Test string for read/write, valid are:
     !                          'READ' and 'WRITE'.
     !       NDSOP   Int.   I   File unit number.
-    !       IOTST   Int.   O   Test indictor for reading.
+    !       IOTST   Int.   O   Test indicator for reading.
     !                           0 : Data read.
     !                          -1 : Past end of file.
     !       IMOD    I(O)   I   Model number for W3GDAT etc.
@@ -1420,14 +1422,14 @@ CONTAINS
     ! Formats
     !
 900 FORMAT (/' *** WAVEWATCH III ERROR IN W3IOPO :'/                &
-         '     ILEGAL INXOUT VALUE: ',A/)
+         '     ILLEGAL INXOUT VALUE: ',A/)
 901 FORMAT (/' *** WAVEWATCH III ERROR IN W3IOPO :'/                &
          '     MIXED READ/WRITE, LAST REQUEST: ',A/)
 902 FORMAT (/' *** WAVEWATCH III ERROR IN W3IOPO :'/                &
-         '     ILEGAL IDSTR, READ : ',A/                        &
+         '     ILLEGAL IDSTR, READ : ',A/                        &
          '                  CHECK : ',A/)
 903 FORMAT (/' *** WAVEWATCH III ERROR IN W3IOPO :'/                &
-         '     ILEGAL VEROPT, READ : ',A/                       &
+         '     ILLEGAL VEROPT, READ : ',A/                       &
          '                   CHECK : ',A/)
 904 FORMAT (/' *** WAVEWATCH III ERROR IN W3IOPO :'/                &
          '     ERROR IN SPECTRA, MK, MTH : ',2I8/               &

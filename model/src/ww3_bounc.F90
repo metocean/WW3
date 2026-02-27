@@ -166,7 +166,8 @@ PROGRAM W3BOUNC
        NDSTRC, NTRACE, NK1,NTH1,NT1, NSPEC1, &
        NBI, NBI2, NKI, NTHI, NTI, NBO, NBO2, &
        IERR, INTERP, ILOOP, VERBOSE, IBO,    &
-       IRET, ICODE, NDSL
+       IRET, ICODE, NDSL, NSTI, NSTISUB, IPS
+  INTEGER                 :: III, JJJ, NNN
   INTEGER                 :: TIME(2), TIME2(2), VARID(12),         &
        REFDATE(8), CURDATE(8), VARTYPE
 #ifdef W3_S
@@ -175,6 +176,8 @@ PROGRAM W3BOUNC
   !
   INTEGER, ALLOCATABLE    :: IPBPI(:,:), IPBPO(:,:), NCID(:),      &
        DIMID(:,:), DIMLN(:,:)
+  INTEGER, ALLOCATABLE    :: IPBPOCAT(:), DMININX(:), RES(:)
+  INTEGER                 :: IRD, JRD, KRD
   !
   REAL                    :: FR1I, XFRI, TH1I, FACTOR, OFFSET, DMIN,&
        DIST, DMIN2, COS1, DLON, DLAT, DLO,    &
@@ -184,7 +187,9 @@ PROGRAM W3BOUNC
        FREQ(:), THETA(:),                    &
        XBPI(:), YBPI(:), RDBPI(:,:),         &
        XBPO(:), YBPO(:), RDBPO(:,:),         &
-       ABPIN(:,:), ABPIN2(:,:,:)
+       ABPIN(:,:), ABPIN2(:,:,:),            &
+       distances(:), distances_sub(:)
+  REAL, ALLOCATABLE       :: LATSTMP(:), LONSTMP(:)
 #ifdef W3_RTD
   REAL, ALLOCATABLE     :: XTMP(:), YTMP(:), ANGTMP(:)
   LOGICAL               :: ISRTD
@@ -444,9 +449,9 @@ PROGRAM W3BOUNC
 #endif
     !
     OPEN(NDSB,FILE='nest.ww3',form='UNFORMATTED', convert=file_endian,status='unknown')
-    ALLOCATE(DIMID(NBO2,3),DIMLN(NBO2,3),NCID(NBO2))
+    ALLOCATE(DIMID(NBO2,4),DIMLN(NBO2,4),NCID(NBO2))
 
-    ALLOCATE(LATS(NBO2),LONS(NBO2),STATION(16,NBO2))
+!    ALLOCATE(LATS(NBO2),LONS(NBO2),STATION(16,NBO2))
 
     DO IP=1,NBO2
       ! open file
@@ -470,16 +475,25 @@ PROGRAM W3BOUNC
       CALL CHECK_ERR(IRET)
       IRET=NF90_INQ_DIMID(NCID(IP),'direction',DIMID(IP,3))
       CALL CHECK_ERR(IRET)
+      IRET=NF90_INQ_DIMID(NCID(IP),'station',DIMID(IP,4))
+      CALL CHECK_ERR(IRET)
       IRET=NF90_INQUIRE_DIMENSION(NCID(IP),DIMID(IP,1),len=DIMLN(IP,1))
       CALL CHECK_ERR(IRET)
       IRET=NF90_INQUIRE_DIMENSION(NCID(IP),DIMID(IP,2),len=DIMLN(IP,2))
       CALL CHECK_ERR(IRET)
       IRET=NF90_INQUIRE_DIMENSION(NCID(IP),DIMID(IP,3),len=DIMLN(IP,3))
       CALL CHECK_ERR(IRET)
+      IRET=NF90_INQUIRE_DIMENSION(NCID(IP),DIMID(IP,4),len=DIMLN(IP,4))
+      CALL CHECK_ERR(IRET)
 
       NTI=DIMLN(IP,1)
       NKI=DIMLN(IP,2)
       NTHI=DIMLN(IP,3)
+      NSTI=DIMLN(IP,4)
+      print*, 'Number of timesteps in file', NTI
+      print*, 'Number of frequencies in file', NKI
+      print*, 'Number of directions in file', NTHI
+      print*, 'Number of stations in file', NSTI
 
       IF (IP.EQ.1) THEN
         NT1=NTI
@@ -487,11 +501,11 @@ PROGRAM W3BOUNC
         NTH1=NTHI
         NSPEC1  = NK1 * NTH1
         ALLOCATE(TIMES(NT1))
-        ALLOCATE (FREQ(NK1),THETA(NTH1))
-        ALLOCATE (SPEC2D(NTH1,NK1,NT1,NBO2))
-        ALLOCATE (ABPIN2(NK*NTH,NT1,NBO2))
+!        ALLOCATE (FREQ(NK1),THETA(NTH1))
+!        ALLOCATE (SPEC2D(NTH1,NK1,NT1,NBO2))
+!        ALLOCATE (ABPIN2(NK*NTH,NT1,NBO2))
 
-        ! instanciates time
+        ! instantiates time
         REFDATE(:)=0.
         IRET=NF90_INQ_VARID(NCID(IP),"time",VARID(1))
         CALL CHECK_ERR(IRET)
@@ -515,14 +529,27 @@ PROGRAM W3BOUNC
 
       ! position variables : lon/lat or x/y
       IF ( FLAGLL ) THEN
+        ! lat and lon variables
+        ALLOCATE(LATSTMP(NSTI),LONSTMP(NSTI))
+        !
         IRET=NF90_INQ_VARID(NCID(IP), 'latitude', VARID(2))
         CALL CHECK_ERR(IRET)
-        IRET=NF90_GET_VAR(NCID(IP), VARID(2), LATS(IP))
+        IRET=NF90_GET_VAR(NCID(IP), VARID(2), LATSTMP(:))
         CALL CHECK_ERR(IRET)
+        IRET=NF90_GET_ATT(NCID(IP),VARID(2),"scale_factor",FACTOR)
+        IF (IRET.NE.0) FACTOR=1.
+        IRET=NF90_GET_ATT(NCID(IP),VARID(2),"add_offset",OFFSET)
+        IF (IRET.NE.0) OFFSET=0.
+        LATSTMP(:)=(LATSTMP(:)*FACTOR)+OFFSET
         IRET=NF90_INQ_VARID(NCID(IP), 'longitude', VARID(3))
         CALL CHECK_ERR(IRET)
-        IRET=NF90_GET_VAR(NCID(IP), VARID(3), LONS(IP))
+        IRET=NF90_GET_VAR(NCID(IP), VARID(3), LONSTMP(:))
         CALL CHECK_ERR(IRET)
+        IRET=NF90_GET_ATT(NCID(IP),VARID(3),"scale_factor",FACTOR)
+        IF (IRET.NE.0) FACTOR=1.
+        IRET=NF90_GET_ATT(NCID(IP),VARID(3),"add_offset",OFFSET)
+        IF (IRET.NE.0) OFFSET=0.
+        LONSTMP(:)=(LONSTMP(:)*FACTOR)+OFFSET
       ELSE
         IRET=NF90_INQ_VARID(NCID(IP), 'y', VARID(2))
         CALL CHECK_ERR(IRET)
@@ -533,6 +560,109 @@ PROGRAM W3BOUNC
         IRET=NF90_GET_VAR(NCID(IP), VARID(3), LONS(IP))
         CALL CHECK_ERR(IRET)
       END IF
+
+!         loops on points
+      IF (verbose.EQ.1) WRITE(ndso,*) 'dist:','  dmin','  dmin2','  ip1',  &
+                                      '  ipbpo(ip1,1)','  ipbpo(ip1,2)',         &
+                                      '  lonstmp(ipbpo(ip1,1))','  lonstmp(ipbpo(ip1,2))','  xbpo(ip1)', &
+                                      '  latstmp(ipbpo(ip1,1))','  latstmp(ipbpo(ip1,2))','  ybpo(ip1)'
+
+      ! initial loop over all sites establish which spectra are
+      ! within range of the desired boundary points. Once this is
+      ! established, only these points are read in in full.
+
+      PRINT*,"Determining closest points..."
+
+!    !TOM's code:
+!    ipbpo(:,:)=1
+!    do ip1=1,nbo
+!      dmin=360.+180.
+!      dmin2=360.+180.
+!           loops on sites
+!      do ips=1,nsti
+!             searches for the nearest 2 points where spectra are available
+!        dist=sqrt((lonstmp(ips)-xbpo(ip1))**2+(latstmp(ips)-ybpo(ip1))**2)
+!        if (dmin.eq.(360.+180.)) then
+!          if(dist.lt.dmin) then
+!            ipbpo(ip1,1)=ips
+!            dmin=dist
+!          end if
+!        else
+!          if(dist.lt.dmin2) then
+!            if(dist.lt.dmin) then
+!              ipbpo(ip1,2)=ipbpo(ip1,1)
+!              dmin2=dmin
+!              ipbpo(ip1,1)=ips
+!              dmin=dist
+!            else
+!              ipbpo(ip1,2)=ips
+!              dmin2=dist
+!            end if
+!          end if
+!        end if
+!      end do ! ip1=1,nsti
+!          if (verbose.eq.1) write(ndso,*) 'dist:',dmin,dmin2,ip1,ipbpo(ip1,1),ipbpo(ip1,2), &
+!                                            lonstmp(ipbpo(ip1,1)),lonstmp(ipbpo(ip1,2)),xbpo(ip1), &
+!                                            latstmp(ipbpo(ip1,1)),latstmp(ipbpo(ip1,2)),ybpo(ip1)
+!      end do ! ip=1,npo
+
+
+      ALLOCATE(distances(nsti))
+      DO IP1=1,NBO
+          ! Calculate distances to this point
+          DO IPS=1,NSTI
+              distances(IPS)=SQRT((LONSTMP(IPS)-XBPO(IP1))**2+(LATSTMP(IPS)-YBPO(IP1))**2)
+          END DO
+
+          ! Grab the two lower values (two closest points)
+          IPBPO(IP1,1) = MINLOC(distances, DIM=1)
+          IPBPO(IP1,2) = MINLOC(distances, MASK=( distances .NE. MINVAL(distances)), DIM=1)
+
+          IF (verbose.EQ.1) WRITE(NDSO,*) 'dist:',dmin,dmin2,ip1,ipbpo(ip1,1),ipbpo(ip1,2), &
+                                          lonstmp(ipbpo(ip1,1)),lonstmp(ipbpo(ip1,2)),xbpo(ip1), &
+                                          latstmp(ipbpo(ip1,1)),latstmp(ipbpo(ip1,2)),ybpo(ip1)
+
+      END DO ! ip1=1,nbo
+
+      DEALLOCATE(distances)
+
+      ! flatten array
+      allocate(ipbpocat(2*nbo))
+      nnn=1
+      do jjj=1,2
+        do iii=1,nbo
+            ipbpocat(nnn) = ipbpo(iii,jjj)
+            nnn = nnn+1
+          enddo
+      enddo
+
+      ! Remove duplicates
+      allocate(res(size(ipbpocat)))
+      krd = 1
+      res(1) = ipbpocat(1)
+      outer: do ird=2,size(ipbpocat)
+          do JRD=1,krd
+            if (res(JRD) == ipbpocat(ird)) then
+                ! found a match so start looking again
+                cycle outer
+            end if
+          end do
+          ! no match found so add it to the output
+          krd = krd + 1
+          res(krd) = ipbpocat(ird)
+      end do outer
+      !write(*,advance='no',fmt='(a,i0,a,i0)') 'unique list has ' &
+      !  ,krd,'elements of ',size(ipbpocat)
+      !write(*,*) res(1:krd)
+      allocate(dmininx(krd))
+      dmininx=res(1:krd)
+      nstisub=size(dmininx)
+
+      ! allocate arrays with new subset of sites
+      allocate(lats(nstisub),lons(nstisub))
+      allocate(freq(nk1),theta(nth1))
+      allocate(spec2d(nth1,nk1,nt1,nstisub))
+      allocate(abpin2(nk*nth1,nt1,nstisub))
 
       ! freq and dir variables
       IRET=NF90_INQ_VARID(NCID(IP),"frequency",VARID(4))
@@ -545,36 +675,56 @@ PROGRAM W3BOUNC
       CALL CHECK_ERR(IRET)
       THETA=MOD(2.5*PI-(PI/180)*THETA,TPI)
 
-      ! 2D spectra depending on station name or lat/lon
-      IRET=NF90_INQ_VARID(NCID(IP),"efth",VARID(7))
-      IF (IRET.NE.0) IRET=NF90_INQ_VARID(NCID(IP),"Efth",VARID(7))
-      CALL CHECK_ERR(IRET)
-      IRET=NF90_INQUIRE_VARIABLE(NCID(IP),VARID(7),XTYPE=VARTYPE)
-      CALL CHECK_ERR(IRET)
-      IRET=NF90_GET_ATT(NCID(IP),VARID(7),"_FillValue",FILLVAL)
-      CALL CHECK_ERR(IRET)
-      IRET=NF90_GET_ATT(NCID(IP),VARID(7),"scale_factor",FACTOR)
-      IF (IRET.NE.0) FACTOR=1.
-      IRET=NF90_GET_ATT(NCID(IP),VARID(7),"add_offset",OFFSET)
-      IF (IRET.NE.0) OFFSET=0.
-      IRET = NF90_INQ_VARID(NCID(IP), 'station_name', VARID(6))
-      IF (IRET.NE.0) THEN
-        ! efth(time, frequency, direction, latitude, longitude)
-        IRET=NF90_GET_VAR(NCID(IP),VARID(7),SPEC2D(:,:,:,IP),       &
-             start=(/1,1,1,1/),count=(/1,1,NTHI,NKI,NTI/))
+      ! loop over the points to be used (given by dimindex) and
+      ! extract data at these locations
+      print*,"Reading in ",nstisub," stations of ",nsti," in file..."
+
+      do ips=1,nstisub
+        print*,"ips = ",ips
+        iret=nf90_inq_varid(ncid(IP), 'latitude', varid(2))
+        call check_err(iret)
+        iret=nf90_get_var(ncid(IP),varid(2),lats(ips),start=(/dmininx(ips)/))
+        !iret=nf90_get_var(ncid(IP), varid(2),lats(:),count=dmininx)
+        call check_err(iret)
+        IRET=NF90_GET_ATT(NCID(IP),VARID(2),"scale_factor",FACTOR)
+        IF (IRET.NE.0) FACTOR=1.
+        IRET=NF90_GET_ATT(NCID(IP),VARID(2),"add_offset",OFFSET)
+        IF (IRET.NE.0) OFFSET=0.
+        lats(ips)=(lats(ips)*FACTOR)+OFFSET
+!
+        iret=nf90_inq_varid(ncid(IP), 'longitude', varid(3))
+        call check_err(iret)
+        iret=nf90_get_var(ncid(IP),varid(3),lons(ips),start=(/dmininx(ips)/))
+        call check_err(iret)
+        IRET=NF90_GET_ATT(NCID(IP),VARID(3),"scale_factor",FACTOR)
+        IF (IRET.NE.0) FACTOR=1.
+        IRET=NF90_GET_ATT(NCID(IP),VARID(3),"add_offset",OFFSET)
+        IF (IRET.NE.0) OFFSET=0.
+        lons(ips)=(lons(ips)*FACTOR)+OFFSET
+
+        iret=nf90_inq_varid(ncid(IP), 'latitude', varid(2))
+        call check_err(iret)
+        iret=nf90_inq_varid(ncid(IP), 'longitude', varid(3))
+        call check_err(iret)
+
+        iret=nf90_inq_varid(ncid(IP),"efth",varid(7))
+        if (iret.ne.0 ) iret=nf90_inq_varid(ncid(IP),"Efth",varid(7))
+        call check_err(iret)
+
+        IRET=NF90_INQUIRE_VARIABLE(NCID(IP),VARID(7),XTYPE=VARTYPE)
         CALL CHECK_ERR(IRET)
-      ELSE
-        ! efth(time, station, frequency, direction)
-        IRET=NF90_GET_VAR(NCID(IP),VARID(7),SPEC2D(:,:,:,IP),       &
-             start=(/1,1,1,1/),count=(/NTHI,NKI,1,NTI/))
+        IRET=NF90_GET_ATT(NCID(IP),VARID(7),"_FillValue",FILLVAL)
         CALL CHECK_ERR(IRET)
-      END IF
-      ! apply scale_factor and add_offset
-      IF (VARTYPE.EQ.NF90_SHORT) THEN
-        WHERE(SPEC2D(:,:,:,IP).NE.FILLVAL) SPEC2D(:,:,:,IP)=(EXP(SPEC2D(:,:,:,IP)*FACTOR*LOG(10.)))-1e-12
-      ELSE
-        WHERE(SPEC2D(:,:,:,IP).NE.FILLVAL) SPEC2D(:,:,:,IP)=(SPEC2D(:,:,:,IP)*FACTOR)+OFFSET
-      END IF
+        IRET=NF90_GET_ATT(NCID(IP),VARID(7),"scale_factor",FACTOR)
+        IF (IRET.NE.0) FACTOR=1.
+        IRET=NF90_GET_ATT(NCID(IP),VARID(7),"add_offset",OFFSET)
+        IF (IRET.NE.0) OFFSET=0.
+        iret=nf90_get_var(ncid(IP),varid(7),SPEC2D(:,:,:,IPS),                &
+                          start=(/1,1,dmininx(ips),1/),count=(/NTHI,NKI,1,NTI/))
+        call check_err(iret)
+        SPEC2D(:,:,:,IPS)=(SPEC2D(:,:,:,IPS)*FACTOR)+OFFSET
+
+      enddo ! ips=1,nstisub
 
       ! close spectra file
       IRET=NF90_CLOSE(NCID(IP))
@@ -582,8 +732,10 @@ PROGRAM W3BOUNC
       !
     END DO ! IP=1,NBO2
 
-
-
+    DO ip=1,nstisub
+      print*, lats(ip),lons(ip), maxval(spec2d(:,:,:,IP))
+    END DO
+    !
     !
     !--- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     ! 6.  Checks on spectral discretization
@@ -601,11 +753,11 @@ PROGRAM W3BOUNC
     IF (VERBOSE.GE.1) WRITE(NDSO,*) 'SPCONV:', SPCONV, NKI, NK, NTHI, NTH
     !
     !--- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-    ! 7. Loops on files and instanciate ABPIN2
+    ! 7. Loops on files and instantiate ABPIN2
     !
     IF ( .NOT. SPCONV ) THEN
 
-      DO IP=1,NBO2
+      DO IP=1,nstisub
         ! Copies spectrum in frequency and direction ranges
         DO I=1,NK
           DO J=1,NTH
@@ -641,47 +793,26 @@ PROGRAM W3BOUNC
     RDBPO(:,1)=1.
     RDBPO(:,2:4)=0.
 
-    !       Loops on points
+    ALLOCATE(distances_sub(NSTISUB))
     DO IP1=1,NBO
-      DMIN=360.+180.
-      DMIN2=360.+180.
-      !         Loops on files
-      DO IP=1,NBO2
-        !           Searches for the nearest 2 points where spectra are available
-        IF (FLAGLL)  THEN
-          DIST=DIST_SPHERE ( LONS(IP),LATS(IP),XBPO(IP1),YBPO(IP1) )
-        ELSE
-          DIST=SQRT((LONS(IP)-XBPO(IP1))**2+(LATS(IP)-YBPO(IP1))**2)
-        END IF
-        IF (DMIN.EQ.(360.+180.)) THEN
-          IF(DIST.LT.DMIN) THEN
-            IPBPO(IP1,1)=IP
-            DMIN=DIST
-          END IF
-        ELSE
-          IF(DIST.LT.DMIN2) THEN
-            IF(DIST.LT.DMIN) THEN
-              IPBPO(IP1,2)=IPBPO(IP1,1)
-              DMIN2=DMIN
-              IPBPO(IP1,1)=IP
-              DMIN=DIST
-            ELSE
-              IPBPO(IP1,2)=IP
-              DMIN2=DIST
-            END IF
-          END IF
-        END IF
-      END DO ! IP1=1,NBO2
-      IF (VERBOSE.GE.1) WRITE(NDSO,*) 'DIST:',DMIN,DMIN2,IP1,IPBPO(IP1,1),IPBPO(IP1,2), &
-           LONS(IPBPO(IP1,1)),LONS(IPBPO(IP1,2)),XBPO(IP1), &
-           LATS(IPBPO(IP1,1)),LATS(IPBPO(IP1,2)),YBPO(IP1)
+      ! Calculate distances to this point
+      DO IP=1,NSTISUB
+        distances_sub(IP)=SQRT((LONS(IP)-XBPO(IP1))**2+(LATS(IP)-YBPO(IP1))**2)
+      END DO
 
+      ! Grab the two lower values (two closest points)
+      ipbpo(ip1,1) = MINLOC(distances_sub, DIM=1)
+      ipbpo(ip1,2) = MINLOC(distances_sub, MASK=( distances_sub .NE. MINVAL(distances_sub)), DIM=1)
 
+      IF (VERBOSE.GE.1) WRITE(NDSO,*) 'DIST:',IP1,IPBPO(IP1,1),IPBPO(IP1,2), &
+                                        LONS(IPBPO(IP1,1)),LONS(IPBPO(IP1,2)),XBPO(IP1), &
+                                        LATS(IPBPO(IP1,1)),LATS(IPBPO(IP1,2)),YBPO(IP1)
+      !
       !
       !--- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
       ! 9. Computes linear interpolation coefficient between the nearest 2 points
       !
-      IF (INTERP.GT.1.AND.NBO2.GT.1) THEN
+      IF (INTERP.GT.1.AND.nstisub.GT.1) THEN
         IF (FLAGLL) THEN
           DLON=LONS(IPBPO(IP1,2))-LONS(IPBPO(IP1,1))
           DLAT=LATS(IPBPO(IP1,2))-LATS(IPBPO(IP1,1))
@@ -740,10 +871,9 @@ PROGRAM W3BOUNC
       CALL D2T(CURDATE,TIME,IERR)
 
       ! write to output file nest.ww3
-      WRITE(NDSO,'(A,2I9,A,I6,A,G16.5)') 'Writing boundary data for time:', &
-           TIME, ' at ',NBO2,' points. Max.: ', MAXVAL(ABPIN2(:,IT,:))
-      WRITE(NDSB,IOSTAT=IERR) TIME, NBO2
-      DO IP=1, NBO2
+      write(ndso,'(a,3i9)') 'writing boundary data for time:',time,nstisub
+      write(ndsb,iostat=ierr) time, nstisub
+      DO IP=1, nstisub
         WRITE(NDSB) ABPIN2(:,IT,IP)
       END DO
     END DO ! IT=0,NT1
@@ -788,7 +918,7 @@ PROGRAM W3BOUNC
   !
   ! Formats
   !
-900 FORMAT (/15X,'   *** WAVEWATCH III Bounday input prep. ***   '/ &
+900 FORMAT (/15X,'   *** WAVEWATCH III Boundary input prep. ***   '/ &
        15X,'==============================================='/)
   !
 901 FORMAT ( '  Comment character is ''',A,''''/)

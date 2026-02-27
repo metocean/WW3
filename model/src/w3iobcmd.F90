@@ -90,7 +90,7 @@ CONTAINS
   !> @param[inout] NDSB    Data set unit number.
   !> @param[inout] TIME1   Present time (w), time of first field (r).
   !> @param[inout] TIME2   Time of second field.
-  !> @param[inout] IOTST   Test indictor for reading.
+  !> @param[inout] IOTST   Test indicator for reading.
   !> @param[inout] IMOD    Optional grid number, defaults to 1.
   !>
   !> @author H. L. Tolman  @date 20-Jan-2017
@@ -153,7 +153,7 @@ CONTAINS
     !       TIME1   I.A.  I/O  Present time.                          (w)
     !                          Time of first field.                   (r)
     !       TIME2   I.A.   O   Time of second field.                  (r)
-    !       IOTST   Int.   O   Test indictor for reading.
+    !       IOTST   Int.   O   Test indicator for reading.
     !                           1 : File not found.
     !                           0 : Fields read.
     !                          -1 : Past end of file.
@@ -333,12 +333,12 @@ CONTAINS
     IF ( INXOUT.EQ.'WRITE' .AND. FILEW ) THEN
       DO IFILE=1, NFBPO
         NDSL(IFILE) = NDSB + IFILE - 1
-        WRITE (FILEN,'(A4,I1,A1,A)') 'nest', IFILE, '.',          &
+        WRITE (FILEN,'(A4,I2.2,A1,A)') 'nest', IFILE, '.',          &
              FILEXT(:I)
 #ifdef W3_T
         WRITE (NDST,9001) FILEN(:6+I), NDSL(IFILE)
 #endif
-        OPEN (NDSL(IFILE),FILE=FNMPRE(:J)//FILEN(:6+I),           &
+        OPEN (NDSL(IFILE),FILE=FNMPRE(:J)//FILEN(:7+I),           &
              form='UNFORMATTED', convert=file_endian,ERR=800,IOSTAT=IERR)
       END DO
     END IF

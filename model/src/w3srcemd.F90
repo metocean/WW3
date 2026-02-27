@@ -407,7 +407,7 @@ CONTAINS
     !         a  Set maximum change and wavenumber arrays.
     !         b  Prepare dynamic time stepping.
     !         c  Compute mean parameters.                       ( W3SPRn )
-    !         d  Compute stresses (if posible).
+    !         d  Compute stresses (if possible).
     !         e  Prepare cut-off
     !         f  Test output for !/NNT option.
     !     --start-dynamic-integration-loop---------------------------------
@@ -1045,7 +1045,7 @@ CONTAINS
     TAUWY=0.
     IF ( IT .eq. 0 ) THEN
       LLWS(:) = .TRUE.
-      USTAR=0.
+      USTAR=0.001
       USTDIR=0.
       CALL W3SPR3 (SPEC, CG1, WN1, EMEAN, FMEAN, FMEANS, WNMEAN, &
            AMAX, U10ABS, U10DIR, USTAR, USTDIR,          &
@@ -1068,7 +1068,7 @@ CONTAINS
     TAUWY=0.
     IF ( IT .eq. 0 ) THEN
       LLWS(:) = .TRUE.
-      USTAR=0.
+      USTAR=0.001
       USTDIR=0.
     ELSE
       CALL W3SPR4 (SPEC, CG1, WN1, EMEAN, FMEAN, FMEAN1, WNMEAN, &
@@ -1170,11 +1170,12 @@ CONTAINS
     FHIGH  = MAX(FFXFM * MAX(FMEAN,FMEANWS),FFXPM / USTAR)
 #endif
 #ifdef W3_ST4
-    ! Introduces a Long & Resio (JGR2007) type dependance on wave age
+    ! Introduces a Long & Resio (JGR2007) type dependence on wave age
 #endif
     ! !/ST4      FAGE   = FFXFA*TANH(0.3*U10ABS*FMEANWS*TPI/GRAV)
 #ifdef W3_ST4
     FAGE   = 0.
+    USTAR  = MAX ( 0.001 , USTAR )
     FHIGH  = MAX( (FFXFM + FAGE ) * MAX(FMEAN1,FMEANWS), FFXPM / USTAR)
     FHIGI  = FFXFA * FMEAN1
 #endif
@@ -1501,7 +1502,7 @@ CONTAINS
       DTRAW  = DT
 #endif
       IDT     = 1 + INT ( 0.99*(DTG-DTTOT)/DT ) ! number of iterations
-      DT      = (DTG-DTTOT)/REAL(IDT)           ! actualy time step
+      DT      = (DTG-DTTOT)/REAL(IDT)           ! actually time step
       SHAVE   = DT.LT.DTMIN .AND. DT.LT.DTG-DTTOT   ! limiter check ...
       SHAVEIO = SHAVE
       DT      = MAX ( DT , MIN (DTMIN,DTG-DTTOT) ) ! override dt with input time step or last time step if it is bigger ... anyway the limiter is on!
@@ -1881,12 +1882,13 @@ CONTAINS
 #endif
       !
 #ifdef W3_ST4
-      ! Introduces a Long & Resio (JGR2007) type dependance on wave age
+      ! Introduces a Long & Resio (JGR2007) type dependence on wave age
       FAGE   = FFXFA*TANH(0.3*U10ABS*FMEANWS*TPI/GRAV)
       FH1    = (FFXFM+FAGE) * FMEAN1
 #endif
 
 #ifdef W3_ST4
+      USTAR  = MAX ( 0.001 , USTAR )
       FH2    = FFXPM / USTAR
       FHIGH  = MIN ( SIG(NK) , MAX ( FH1 , FH2 ) )
       NKH    = MAX ( 2 , MIN ( NKH1 ,                           &
@@ -2479,7 +2481,7 @@ CONTAINS
     CALL STRACE (IENT, 'CALC_FPI')
 #endif
     !
-    !     Calculate FPI: equivalent peak frequncy from wind source term
+    !     Calculate FPI: equivalent peak frequency from wind source term
     !     input
     !
     DO IK=1, NK

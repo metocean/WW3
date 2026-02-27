@@ -44,8 +44,8 @@
 !>
 !>    Any other attribute name is assumed to be an optional "extra"
 !>    attribute. This extra attribute can take an optional "type"
-!>    keyworkd to specify the variable tpye of the metadata. If
-!>    no type is supplied, it defaults to a characer type. Valid
+!>    keyword to specify the variable type of the metadata. If
+!>    no type is supplied, it defaults to a character type. Valid
 !>    types are one of ["c", "r", "i"] for character/string,
 !>    real/float or integer values respectively.
 !>
@@ -96,8 +96,8 @@
 !>    @endverbatim
 !>
 !>    Specifying the <template-name> with a trailing underscore will
-!>    provide an underscore seperated (_) string, rather than space
-!>    seperated.
+!>    provide an underscore separated (_) string, rather than space
+!>    separated.
 !>
 !>    Example ounfmeta.inp file:
 !>
@@ -143,7 +143,7 @@
 !>    $ Global metadata:
 !>    META global
 !>      institution = UKMO
-!>      comment "space seperated strings should be quoted" c
+!>      comment "space separated strings should be quoted" c
 !>      version = 1.0 r
 !>    @endverbatim
 !>
@@ -215,7 +215,7 @@ MODULE W3OUNFMETAMD
     CHARACTER(LEN=24)  :: UNITS = UNSETC    !< SI units for field
     CHARACTER(LEN=50)  :: ENAME = UNSETC    !< Field name used in output filename
     CHARACTER(LEN=80)  :: VARNM = UNSETC, & !< netCDF variable name
-         VARNL = UNSETC    !< "long_name" attibute
+         VARNL = UNSETC    !< "long_name" attribute
     CHARACTER(LEN=120) :: VARNS = UNSETC, & !< "standard_name" attribute
          VARNG = UNSETC, & !< "globwave_name" attribute
          VARND = UNSETC    !< "direction_convention" attribute
@@ -271,7 +271,7 @@ MODULE W3OUNFMETAMD
   INTEGER            :: NCVARTYPE   !< NetCDF variable type (2=int, 3=real, 4=depends)
   CHARACTER(LEN=30)  :: DIRCOM      !< Directional convention comment
   CHARACTER(LEN=128) :: PARTCOM     !< Partitioning method comment
-  CHARACTER(LEN=15)  :: SNAMEP(5)   !< Part. standard name templates
+  CHARACTER(LEN=15)  :: SNAMEP(6)   !< Part. standard name templates
 
   !> Flag for vector (true) or direction/magnitude (false) convention
   !> for directional fields
@@ -362,10 +362,11 @@ CONTAINS
     !  Set partitioning method comment and standard name templates:
     IF( PTMETH .LE. 3 ) THEN
       SNAMEP(1) = 'wind'
-      SNAMEP(2) = 'primary swell'
-      SNAMEP(3) = 'secondary swell'
-      SNAMEP(4) = 'tertiary swell'
-      SNAMEP(5) = 'swell'
+      SNAMEP(2) = 'primary_swell'
+      SNAMEP(3) = 'secondary_swell'
+      SNAMEP(4) = 'tertiary_swell'
+      SNAMEP(5) = 'quaternary_swell'
+      SNAMEP(6) = 'quinary_swell'
     ELSE
       SNAMEP(1) = 'wind'
       SNAMEP(2) = 'swell'
@@ -395,7 +396,7 @@ CONTAINS
     ! 3. Set the default values for the OUNF netCDF meta data.
     CALL DEFAULT_META()
 
-    ! Set the default coordiante reference system (if applicable)
+    ! Set the default coordinate reference system (if applicable)
     CALL DEFAULT_CRS_META()
 
     ! If the ounfmeta.inp exists, read this in to override defaults:
@@ -1090,7 +1091,7 @@ CONTAINS
     LOGICAL            :: EOF, NEW
     TYPE(META_PAIR_T)  :: EXTRA
 
-    ! Keep reading lines until we hit EOF or anoter META keyword
+    ! Keep reading lines until we hit EOF or another META keyword
     DO
       CALL NEXT_LINE(NDMI, BUF, ILINE, EOF, NEW_SECTION=NEW)
       IF(EOF) THEN
@@ -1386,7 +1387,7 @@ CONTAINS
     LOGICAL            :: EOF, NEW
     TYPE(META_PAIR_T)  :: META
     !
-    ! Keep reading lines until we hit EOF or anoter META keyword
+    ! Keep reading lines until we hit EOF or another META keyword
     DO
       CALL NEXT_LINE(NDMI, BUF, ILINE, EOF, NEW_SECTION=NEW)
       IF(EOF) THEN
@@ -1523,7 +1524,7 @@ CONTAINS
          '     ERROR READING CRS HEADER - MISSING CRS NAME?' )
     !
 1001 FORMAT (/' *** WARNING : USER DEFINED CRS SECTION WILL ' /      &
-         '     OVERIDE DEFAULT CRS DEFINITION FOR GRID' /       &
+         '     OVERRIDE DEFAULT CRS DEFINITION FOR GRID' /       &
          '     PREV CRS = ', A )
     !
 1002 FORMAT (/' *** WARNING : DUPLICATE CRS SECTION WILL ' /         &
@@ -1621,7 +1622,7 @@ CONTAINS
     !
     !  1. Purpose :
     !
-    !     Returns a META_T type containig the netCDF matadata for the
+    !     Returns a META_T type containing the netCDF metadata for the
     !     requested field
     !
     !  2. Method :
@@ -1837,7 +1838,7 @@ CONTAINS
 
 
   !/ ------------------------------------------------------------------- /
-  !> @brief Prints the patition templates to screen (for debug use).
+  !> @brief Prints the partition templates to screen (for debug use).
   !> @author Chris Bunney @date 04-Dec-2020
   !/ ------------------------------------------------------------------- /
   SUBROUTINE PRINT_PART_TMPL()
@@ -1855,7 +1856,7 @@ CONTAINS
     !
     !  1. Purpose :
     !
-    !     Prints the patition templates to screen (for debug use).
+    !     Prints the partition templates to screen (for debug use).
     !
     !/ ------------------------------------------------------------------- /
     IMPLICIT NONE
@@ -1959,8 +1960,8 @@ CONTAINS
   END SUBROUTINE ADD_PARTNO
 
   !/ ------------------------------------------------------------------- /
-  !> @brief Performs string substition of placeholder strings with
-  !>    partition number specfic values.
+  !> @brief Performs string substitution of placeholder strings with
+  !>    partition number specific values.
   !>
   !> @details The placeholder \<IPART\> is automatically replaced with the
   !>    partition number (0, 1, 2, etc).
@@ -1988,8 +1989,8 @@ CONTAINS
     !
     !  1. Purpose :
     !
-    !     Performs string substition of placeholder strings with partition
-    !     number specfic values.
+    !     Performs string substitution of placeholder strings with partition
+    !     number specific values.
     !
     !     The placeholder <IPART> is automatically replaced with the
     !     partition number (0, 1, 2, etc).
@@ -2020,7 +2021,7 @@ CONTAINS
 
     ISN = IPART + 1
     IF(PTMETH .LE. 3) THEN
-      IF (ISN .GT. 5) ISN = 5
+      IF (ISN .GT. 6) ISN = 6
     ELSE
       IF (ISN .GT. 2) ISN = 2
     ENDIF
@@ -2086,7 +2087,7 @@ CONTAINS
          '     NOT ENOUGH USER DEFINED ENTRIES FOR TEMPLATE'    / &
          '     TEMPLATE ID     : ',A                            / &
          '     NUM ENTRIES     : ',I2                           / &
-         '     REQESTED IPART* : ',I2                           / &
+         '     REQUESTED IPART* : ',I2                           / &
          '     (*Note: IPART is zero-refernced)'                / &
          '     Please update your ounfmeta.inp file.'           /)
 
@@ -2096,7 +2097,7 @@ CONTAINS
   !> @brief Writes the meta-data entries for a variable.
   !>
   !> @details Attribute pairs defined in META are written to the netCDF
-  !>    variable specificed in the VARID handle.
+  !>    variable specified in the VARID handle.
   !>
   !>    There are two stages to the write - first all "mandatory" or
   !>    "pre-defined" attributes are written out (those defined in the
@@ -2548,7 +2549,7 @@ CONTAINS
     META(1)%VARND = DIRCOM
     IF(VECTOR) THEN
       META(1)%FSC    = 0.01
-      META(1)%UNITS  = 'm s-1'
+      META(1)%UNITS  = 'm.s^{-1}'
       META(1)%VMIN = -9.9
       META(1)%VMAX =  9.9
       META(1)%VARNM='ucur'
@@ -2566,7 +2567,7 @@ CONTAINS
       META(2)%VARNC='cur=sqrt(U**2+V**2)'
     ELSE
       META(1)%FSC    = 0.01
-      META(1)%UNITS  = 'm s-1'
+      META(1)%UNITS  = 'm.s^{-1}'
       META(1)%VMIN = 0
       META(1)%VMAX = 10.0
       META(1)%VARNM='cspd'
@@ -2591,11 +2592,11 @@ CONTAINS
     META(1)%VARND = DIRCOM
     IF(VECTOR) THEN
       META(1)%FSC    = 0.1
-      META(1)%UNITS  = 'm s-1'
+      META(1)%UNITS  = 'm.s^{-1}'
       META(1)%VARNM='uwnd'
-      META(1)%VARNL='eastward_wind'
-      META(1)%VARNS='eastward_wind'
-      META(1)%VARNG='eastward_wind'
+      META(1)%VARNL='eastward_wind_at_10m_above_ground_level'
+      META(1)%VARNS='eastward_wind_at_10m_above_ground_level'
+      META(1)%VARNG='eastward_wind_at_10m_above_ground_level'
       META(1)%VARNC='wind=sqrt(U10**2+V10**2)'
       META(1)%VMIN = -99.0
       META(1)%VMAX =  99.0
@@ -2603,13 +2604,13 @@ CONTAINS
       ! Second component
       META(2) = META(1)
       META(2)%VARNM='vwnd'
-      META(2)%VARNL='northward_wind'
-      META(2)%VARNS='northward_wind'
-      META(2)%VARNG='northward_wind'
+      META(2)%VARNL='northward_wind_at_10m_above_ground_level'
+      META(2)%VARNS='northward_wind_at_10m_above_ground_level'
+      META(2)%VARNG='northward_wind_at_10m_above_ground_level'
       META(2)%VARNC='wind=sqrt(U10**2+V10**2)'
     ELSE
       META(1)%FSC = 0.01
-      META(1)%UNITS= 'm s-1'
+      META(1)%UNITS= 'm.s^{-1}'
       META(1)%VARNM='wspd'
       META(1)%VARNL='wind speed'
       META(1)%VARNS='wind_speed'
@@ -2826,7 +2827,7 @@ CONTAINS
     META(1)%ENAME  = '.dir'
     META(1)%VARNM='dir'
     META(1)%VARNL='wave mean direction'
-    META(1)%VARNS='sea_surface_wave_from_direction'
+    META(1)%VARNS='sea_surface_wave_mean_from_direction'
     META(1)%VARNG='wave_from_direction'
     META(1)%VARND=DIRCOM
     META(1)%VMIN = 0
@@ -2848,8 +2849,8 @@ CONTAINS
     META(1)%UNITS  = 'degree'
     META(1)%ENAME  = '.dp'
     META(1)%VARNM='dp'
-    META(1)%VARNL='peak direction'
-    META(1)%VARNS='sea_surface_wave_peak_direction'
+    META(1)%VARNL='sea surface wave from direction at variance spectral density maximum'
+    META(1)%VARNS='sea_surface_wave_from_direction_at_variance_spectral_density_maximum'
     META(1)%VARNG='dominant_wave_direction'
     META(1)%VARND=DIRCOM
     META(1)%VMIN = 0
@@ -2956,9 +2957,9 @@ CONTAINS
     META(1)%UNITS  = 's'
     META(1)%ENAME  = '.tp'
     META(1)%VARNM='tp'
-    META(1)%VARNL='wave peak period'
-    META(1)%VARNS='sea_surface_wave_peak_period'
-    META(1)%VARNG='dominant_wave_period'
+    META(1)%VARNL='sea_surface_wave_period_at_variance_spectral_density_maximum'
+    META(1)%VARNS='sea_surface_wave_period_at_variance_spectral_density_maximum'
+    META(1)%VARNG='sea_surface_wave_period_at_variance_spectral_density_maximum'
     META(1)%VMIN = 0
     META(1)%VMAX = 50
     ! IFI=2, IFJ=19
@@ -3069,9 +3070,9 @@ CONTAINS
     META(1)%UNITS  = 'm'
     META(1)%ENAME = '.phs'// IPART_TOKEN
     META(1)%VARNM = 'phs'// IPART_TOKEN
-    META(1)%VARNL = 'wave significant height partition '// IPART_TOKEN
+    META(1)%VARNL = 'sea surface '// SPART_TOKEN //' wave significant height'
     META(1)%VARNS = 'sea_surface_'// SPART_TOKEN_ //'_wave_significant_height'
-    META(1)%VARNG = 'significant_wave_height_partition_'// IPART_TOKEN
+    META(1)%VARNG = 'sea_surface_'// SPART_TOKEN_ //'_wave_significant_height'
     META(1)%VARNC = PARTCOM
     META(1)%VMIN = 0
     META(1)%VMAX = 64
@@ -3081,10 +3082,12 @@ CONTAINS
     META(1)%UNITS = 's'
     META(1)%ENAME = '.ptp'// IPART_TOKEN
     META(1)%VARNM = 'ptp'// IPART_TOKEN
-    META(1)%VARNL = 'peak period partition '// IPART_TOKEN
+    META(1)%VARNL = 'sea surface '// SPART_TOKEN //' wave period at variance' // &
+    ' spectral density maximum'
     META(1)%VARNS = 'sea_surface_'// SPART_TOKEN_ //'_wave_period_at_variance' // &
          '_spectral_density_maximum'
-    META(1)%VARNG = 'dominant_wave_period_partition_'// IPART_TOKEN
+    META(1)%VARNG = 'sea_surface_'// SPART_TOKEN_ //'_wave_period_at_variance' // &
+    '_spectral_density_maximum'
     META(1)%VARNC = PARTCOM
     META(1)%VMIN = 0
     META(1)%VMAX = 100
@@ -3094,10 +3097,12 @@ CONTAINS
     META(1)%UNITS = 'm'
     META(1)%ENAME = '.plp'// IPART_TOKEN
     META(1)%VARNM = 'plp'// IPART_TOKEN
-    META(1)%VARNL = 'peak wave length partition '// IPART_TOKEN
-    !META(1)%VARNS = 'peak_wave_length_partition_'// SPART_TOKEN_
-    META(1)%VARNS = ''
-    META(1)%VARNG = 'peak_wave_length_partition_'// IPART_TOKEN
+    META(1)%VARNL = 'sea surface '// SPART_TOKEN //' wave wavelength at variance' // &
+    ' spectral density maximum'
+    META(1)%VARNS = 'sea_surface_'// SPART_TOKEN_ //'_wave_wavelength_at_variance' // &
+    '_spectral_density_maximum'
+    META(1)%VARNG = 'sea_surface_'// SPART_TOKEN_ //'_wave_wavelength_at_variance' // &
+    '_spectral_density_maximum'
     META(1)%VARNC = PARTCOM
     META(1)%VMIN = 0
     META(1)%VMAX = 10000
@@ -3107,9 +3112,9 @@ CONTAINS
     META(1)%UNITS = 'degree'
     META(1)%ENAME =  '.pdir'// IPART_TOKEN
     META(1)%VARNM =  'pdir'// IPART_TOKEN
-    META(1)%VARNL = 'wave mean direction partition '// IPART_TOKEN
-    META(1)%VARNS = 'sea_surface_'// SPART_TOKEN_ //'_wave_from_direction'
-    META(1)%VARNG = 'wave_from_direction_partition_'// IPART_TOKEN
+    META(1)%VARNL = 'sea surface '// SPART_TOKEN //' wave mean from direction'
+    META(1)%VARNS = 'sea_surface_'// SPART_TOKEN_ //'_wave_mean_from_direction'
+    META(1)%VARNG = 'sea_surface_'// SPART_TOKEN_ //'_wave_mean_from_direction'
     META(1)%VARNC = PARTCOM
     META(1)%VARND = DIRCOM
     META(1)%VMIN = 0
@@ -3120,9 +3125,9 @@ CONTAINS
     META(1)%UNITS = 'degree'
     META(1)%ENAME = '.pspr'// IPART_TOKEN
     META(1)%VARNM = 'pspr'// IPART_TOKEN
-    META(1)%VARNL = 'directional spread partition '// IPART_TOKEN
-    META(1)%VARNS = 'sea_surface_'// SPART_TOKEN_ //'_wave_diectional_spread'
-    META(1)%VARNG = 'directional_spread_partition_'// IPART_TOKEN
+    META(1)%VARNL = 'sea surface '// SPART_TOKEN //' wave directional spread'
+    META(1)%VARNS = 'sea_surface_'// SPART_TOKEN_ //'_wave_directional_spread'
+    META(1)%VARNG = 'sea_surface_'// SPART_TOKEN_ //'_wave_directional_spread'
     META(1)%VARNC = PARTCOM
     META(1)%VMIN = 0
     META(1)%VMAX = 90
@@ -3132,10 +3137,9 @@ CONTAINS
     META(1)%UNITS = '1'
     META(1)%ENAME = '.pws'// IPART_TOKEN
     META(1)%VARNM = 'pws'// IPART_TOKEN
-    META(1)%VARNL = 'wind sea fraction in partition '// IPART_TOKEN
-    !META(1)%VARNS = 'wind_sea_fraction_in_partition_'// IPART_TOKEN
-    META(1)%VARNS = ''
-    META(1)%VARNG = 'wind_sea_fraction_in_partition_'// IPART_TOKEN
+    META(1)%VARNL = 'wind sea fraction in '// SPART_TOKEN //' wave partition'
+    META(1)%VARNS = 'wind_sea_fraction_in_'// SPART_TOKEN_ //'_wave_partition'
+    META(1)%VARNG = 'wind_sea_fraction_in_'// SPART_TOKEN_ //'_wave_partition'
     META(1)%VARNC = PARTCOM
     META(1)%VMIN = 0
     META(1)%VMAX = 1
@@ -3172,10 +3176,9 @@ CONTAINS
     META(1)%UNITS = '1'
     META(1)%ENAME = '.ppe'// IPART_TOKEN
     META(1)%VARNM = 'ppe'// IPART_TOKEN
-    META(1)%VARNL = 'peak enhancement factor partition '// IPART_TOKEN
-    !META(1)%VARNS = 'wave_peak_enhancement_factor_partition_'// IPART_TOKEN
-    META(1)%VARNS = ''
-    META(1)%VARNG = 'wave_peak_enhancement_factor_partition_'// IPART_TOKEN
+    META(1)%VARNL = 'sea surface '// SPART_TOKEN //' wave jonswap peak enhancement factor'
+    META(1)%VARNS = 'sea_surface_'// SPART_TOKEN_ //'_wave_jonswap_peak_enhancement_factor'
+    META(1)%VARNG = 'sea_surface_'// SPART_TOKEN_ //'_wave_jonswap_peak_enhancement_factor'
     META(1)%VARNC = 'JONSWAP peak enhancement factor; ' // PARTCOM
     META(1)%VARND = ''
     META(1)%VMIN = 0
@@ -3285,6 +3288,78 @@ CONTAINS
     META(1)%VARNC = PARTCOM
     META(1)%VMIN = 0
     META(1)%VMAX = 100
+    ! IFI=4, IFJ=18, SEA8HS
+    META => GROUP(4)%FIELD(18)%META
+    META(1)%FSC = 0.002
+    META(1)%UNITS = 'm'
+    META(1)%ENAME = '.sea8hs'
+    META(1)%VARNM = 'sea8hs'
+    META(1)%VARNL = 'sea surface below 8s period wave significant height'
+    META(1)%VARNS = 'sea_surface_below_8s_period_wave_significant_height'
+    META(1)%VARNG = 'sea_surface_below_8s_period_wave_significant_height'
+    META(1)%VARNC = ''
+    META(1)%VMIN = 0
+    META(1)%VMAX = 100
+    ! IFI=4, IFJ=19, SW8HS
+    META => GROUP(4)%FIELD(19)%META
+    META(1)%FSC = 0.002
+    META(1)%UNITS = 'm'
+    META(1)%ENAME = '.sw8hs'
+    META(1)%VARNM = 'sw8hs'
+    META(1)%VARNL = 'sea surface above 8s period wave significant height'
+    META(1)%VARNS = 'sea_surface_above_8s_period_wave_significant_height'
+    META(1)%VARNG = 'sea_surface_above_8s_period_wave_significant_height'
+    META(1)%VARNC = ''
+    META(1)%VMIN = 0
+    META(1)%VMAX = 100
+    ! IFI=4, IFJ=20, SEA8TP
+    META => GROUP(4)%FIELD(20)%META
+    META(1)%FSC = 0.01
+    META(1)%UNITS = 's'
+    META(1)%ENAME = '.sea8tp'
+    META(1)%VARNM = 'sea8tp'
+    META(1)%VARNL = 'sea surface below 8s period wave period at variance spectral density maximum'
+    META(1)%VARNS = 'sea_surface_below_8s_period_wave_period_at_variance_spectral_density_maximum'
+    META(1)%VARNG = 'sea_surface_below_8s_period_wave_period_at_variance_spectral_density_maximum'
+    META(1)%VARNC = ''
+    META(1)%VMIN = 0
+    META(1)%VMAX = 50
+    ! IFI=4, IFJ=21, SW8TP
+    META => GROUP(4)%FIELD(21)%META
+    META(1)%FSC = 0.002
+    META(1)%UNITS = 's'
+    META(1)%ENAME = '.sw8tp'
+    META(1)%VARNM = 'sw8tp'
+    META(1)%VARNL = 'sea surface above 8s period wave period at variance spectral density maximum'
+    META(1)%VARNS = 'sea_surface_above_8s_period_wave_period_at_variance_spectral_density_maximum'
+    META(1)%VARNG = 'sea_surface_above_8s_period_wave_period_at_variance_spectral_density_maximum'
+    META(1)%VARNC = ''
+    META(1)%VMIN = 0
+    META(1)%VMAX = 50
+    ! IFI=4, IFJ=22, SEA8DP
+    META => GROUP(4)%FIELD(22)%META
+    META(1)%FSC = 1.
+    META(1)%UNITS = 'degree'
+    META(1)%ENAME = '.sea8dp'
+    META(1)%VARNM = 'sea8dp'
+    META(1)%VARNL = 'sea surface below 8s period wave from direction at variance spectral density maximum'
+    META(1)%VARNS = 'sea_surface_below_8s_period_wave_from_direction_at_variance_spectral_density_maximum'
+    META(1)%VARNG = 'sea_surface_below_8s_period_wave_from_direction_at_variance_spectral_density_maximum'
+    META(1)%VARNC = ''
+    META(1)%VMIN = 0
+    META(1)%VMAX = 360
+    ! IFI=4, IFJ=23, SWDTP
+    META => GROUP(4)%FIELD(23)%META
+    META(1)%FSC = 1.
+    META(1)%UNITS = 'degree'
+    META(1)%ENAME = '.sw8dp'
+    META(1)%VARNM = 'sw8dp'
+    META(1)%VARNL = 'sea surface above 8s period wave from direction at variance spectral density maximum'
+    META(1)%VARNS = 'sea_surface_above_8s_period_wave_from_direction_at_variance_spectral_density_maximum'
+    META(1)%VARNG = 'sea_surface_above_8s_period_wave_from_direction_at_variance_spectral_density_maximum'
+    META(1)%VARNC = ''
+    META(1)%VMIN = 0
+    META(1)%VMAX = 360
     !
     !---------- GROUP 5 ----------------
     !
@@ -3293,7 +3368,7 @@ CONTAINS
     ! First component
     META(1)%FSC    = 0.01
     META(1)%ENAME  = '.ust'
-    META(1)%UNITS  = 'm s-1'
+    META(1)%UNITS  = 'm.s^{-1}'
     META(1)%VARNM='uust'
     META(1)%VARNL='eastward friction velocity'
     !META(1)%VARNS='eastward_friction_velocity'
@@ -3520,7 +3595,7 @@ CONTAINS
     META(1)%UNITS  = 'm2 s-2'
     META(1)%ENAME  = '.bhd'
     META(1)%VARNM='bhd'
-    META(1)%VARNL='radiation pressure (Bernouilli Head)'
+    META(1)%VARNL='radiation pressure (Bernoulli Head)'
     !META(1)%VARNS='radiation_pressure'
     META(1)%VARNS=''
     META(1)%VARNG='radiation_pressure'
@@ -3567,7 +3642,7 @@ CONTAINS
     ! IFI=6, IFJ=6, USS
     META => GROUP(6)%FIELD(6)%META
     META(1)%FSC    = 0.0005
-    META(1)%UNITS  = 'm s-1'
+    META(1)%UNITS  = 'm.s^{-1}'
     META(1)%ENAME  = '.uss'
 
     ! First component
@@ -3613,7 +3688,7 @@ CONTAINS
 
     ! IFI=6, IFJ=8, USF
     META => GROUP(6)%FIELD(8)%META
-    META(1)%UNITS = 'm s-1 Hz-1'
+    META(1)%UNITS = 'm/s/Hz'
     META(1)%FSC = 0.0005
     META(1)%ENAME = '.usf'
     META(1)%VMIN = -4.95
@@ -3698,7 +3773,7 @@ CONTAINS
     META(1)%VMAX = 999
     ! IFI=6, IFJ=12, USP
     META => GROUP(6)%FIELD(12)%META
-    META(1)%UNITS   = 'm s-1'
+    META(1)%UNITS   = 'm.s^{-1}'
     META(1)%FSC    = 0.0005
     META(1)%ENAME  = '.usp'
     META(1)%VARND  = DIRCOM
@@ -3776,7 +3851,7 @@ CONTAINS
     META => GROUP(7)%FIELD(2)%META
     META(1)%FSC    = 0.01
     META(1)%ENAME  = '.ubr'
-    META(1)%UNITS  = 'm s-1'
+    META(1)%UNITS  = 'm.s^{-1}'
     META(1)%VMIN = -180
     META(1)%VMAX = 180
     META(1)%VARND = DIRCOM

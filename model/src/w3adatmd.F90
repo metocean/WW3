@@ -39,7 +39,7 @@ MODULE W3ADATMD
   !/    13-Jun-2006 : Splitting STORE in G/SSTORE.        ( version 3.09 )
   !/    04-Oct-2006 : Add filter to array pointers.       ( version 3.10 )
   !/    28_Mar-2007 : Add partitioned data arrays.        ( version 3.11 )
-  !/                  Add aditional undefined arrays.
+  !/                  Add additional undefined arrays.
   !/    22-Feb-2008 ; Modify MAPTH2 declaration.          ( version 3.13 )
   !/    29-May-2009 : Preparing distribution version.     ( version 3.14 )
   !/    29-Oct-2010 : Adding unstructured grid data.      ( version 3.14 )
@@ -203,9 +203,9 @@ MODULE W3ADATMD
   !    Derivatives in space ....
   !
   !      DDDx      R.A.  Public   Spatial derivatives of the depth.
-  !      DCxDx     R.A.  Public   Spatial dirivatives of the current.
+  !      DCxDx     R.A.  Public   Spatial derivatives of the current.
   !
-  !    Mean parameters from partitiones spectra, 2D array with el.
+  !    Mean parameters from partitions spectra, 2D array with el.
   !    0 holding wind sea data, and 1:NOSWLL holding swell fields.
   !    Last two arrays are regular single-entry arrays.
   !
@@ -260,14 +260,14 @@ MODULE W3ADATMD
   !
   !     Nonlinear interactions ( !/NL1 ) :
   !
-  !      NFR       Int.  Public   Nuber of frequencies ( NFR = NK )
+  !      NFR       Int.  Public   Number of frequencies ( NFR = NK )
   !      NFRHGH    Int.  Public   Auxiliary frequency counter.
   !      NFRCHG    Int.  Public   Id.
   !      NSPECX-Y  Int.  Public   Auxiliary spectral counter.
   !      IPnn      I.A.  Public   Spectral address for Snl.
   !      IMnn      I.A.  Public   Id.
   !      ICnn      I.A.  Public   Id.
-  !      DALn      Real  Public   Lambda dependend weight factors.
+  !      DALn      Real  Public   Lambda dependent weight factors.
   !      AWGn      Real  Public   Interpolation weights for Snl.
   !      SWGn      Real  Public   Interpolation weights for diag. term.
   !      AF11      R.A.  Public   Scaling array (f**11)
@@ -428,13 +428,17 @@ MODULE W3ADATMD
          PWST(:),  PNR(:), PGW(:,:),          &
          PTHP0(:,:), PQP(:,:), PPE(:,:),      &
          PSW(:,:), PTM1(:,:), PT1(:,:),       &
-         PT2(:,:), PEP(:,:)
+         PT2(:,:), PEP(:,:), WS8HS(:),        &
+         SW8HS(:), WS8TP(:), SW8TP(:),        &
+         WS8DP(:), SW8DP(:)
     REAL, POINTER         :: XPHS(:,:), XPTP(:,:), XPLP(:,:),     &
          XPDIR(:,:), XPSI(:,:), XPWS(:,:),    &
          XPWST(:), XPNR(:), XPGW(:,:),        &
          XPTHP0(:,:), XPQP(:,:), XPPE(:,:),   &
          XPSW(:,:), XPTM1(:,:), XPT1(:,:),    &
-         XPT2(:,:), XPEP(:,:)
+         XPT2(:,:), XPEP(:,:), XWS8HS(:),     &
+         XSW8HS(:), XWS8TP(:), XSW8TP(:),     &
+         XSW8DP(:), XWS8DP(:)
     !
     ! Output fields group 5)
     !
@@ -595,7 +599,10 @@ MODULE W3ADATMD
        PDIR(:,:), PSI(:,:), PWS(:,:),       &
        PWST(:), PNR(:), PGW(:,:), PSW(:,:), &
        PTHP0(:,:), PQP(:,:), PPE(:,:),      &
-       PTM1(:,:), PT1(:,:), PT2(:,:),PEP(:,:)
+       PTM1(:,:), PT1(:,:), PT2(:,:),       &
+       PEP(:,:), SW8HS(:), WS8TP(:),        &
+       SW8TP(:), SW8DP(:), WS8DP(:),        &
+       WS8HS(:)
   !
   REAL, POINTER           :: CHARN(:), CGE(:), PHIAW(:),          &
        TAUWIX(:), TAUWIY(:), TAUWNX(:),     &
@@ -994,7 +1001,7 @@ CONTAINS
     !AR: Check this below more ...
     NXXX   = NSEALM * NAPROC
     !
-    !     Output and input parameteres by output type
+    !     Output and input parameters by output type
     !
     !  1) Forcing fields (these arrays are always needed)
     !
@@ -1028,7 +1035,7 @@ CONTAINS
     !
     ! 2) Standard mean wave parameters
     !    Here, all short arrays are always allocated to reduce logical
-    !    checks in all computations. The coresponding full size arrays
+    !    checks in all computations. The corresponding full size arrays
     !    are allocated in W3MPIO only as needed to keep the memory
     !    footprint down.
     !
@@ -1130,6 +1137,12 @@ CONTAINS
          WADATS(IMOD)%PT1(NSEALM,0:NOSWLL),                   &
          WADATS(IMOD)%PT2(NSEALM,0:NOSWLL),                   &
          WADATS(IMOD)%PEP(NSEALM,0:NOSWLL),                   &
+         WADATS(IMOD)%WS8HS(NSEALM),                          &
+         WADATS(IMOD)%SW8HS(NSEALM),                          &
+         WADATS(IMOD)%SW8TP(NSEALM),                          &
+         WADATS(IMOD)%WS8TP(NSEALM),                          &
+         WADATS(IMOD)%SW8DP(NSEALM),                          &
+         WADATS(IMOD)%WS8DP(NSEALM),                          &
          STAT=ISTAT )
     CHECK_ALLOC_STATUS ( ISTAT )
     !
@@ -1141,6 +1154,12 @@ CONTAINS
     WADATS(IMOD)%PWS    = UNDEF
     WADATS(IMOD)%PWST   = UNDEF
     WADATS(IMOD)%PNR    = UNDEF
+    WADATS(IMOD)%SW8HS  = UNDEF
+    WADATS(IMOD)%WS8HS  = UNDEF
+    WADATS(IMOD)%SW8TP  = UNDEF
+    WADATS(IMOD)%WS8TP  = UNDEF
+    WADATS(IMOD)%SW8DP  = UNDEF
+    WADATS(IMOD)%WS8DP  = UNDEF
     WADATS(IMOD)%PTHP0  = UNDEF
     WADATS(IMOD)%PQP    = UNDEF
     WADATS(IMOD)%PPE    = UNDEF
@@ -1500,7 +1519,7 @@ CONTAINS
   END SUBROUTINE W3DIMA
   !/ ------------------------------------------------------------------- /
   !>
-  !> @brief Version of W3DIMX for extended ouput arrays only.
+  !> @brief Version of W3DIMX for extended output arrays only.
   !>
   !> @param[in] IMOD     Model number to point to.
   !> @param[in] NDSE     Error output unit number.
@@ -1525,7 +1544,7 @@ CONTAINS
     !/
     !  1. Purpose :
     !
-    !     Version of W3DIMX for extended ouput arrays only.
+    !     Version of W3DIMX for extended output arrays only.
     !
     !
     ! 10. Source code :
@@ -1925,6 +1944,54 @@ CONTAINS
       CHECK_ALLOC_STATUS ( ISTAT )
     END IF
     !
+    IF ( OUTFLAGS( 4, 18) ) THEN
+      ALLOCATE ( WADATS(IMOD)%XWS8HS(NXXX), STAT=ISTAT )
+      CHECK_ALLOC_STATUS ( ISTAT )
+    ELSE
+      ALLOCATE ( WADATS(IMOD)%XWS8HS(1), STAT=ISTAT )
+      CHECK_ALLOC_STATUS ( ISTAT )
+    END IF
+!
+    IF ( OUTFLAGS( 4, 19) ) THEN
+      ALLOCATE ( WADATS(IMOD)%XSW8HS(NXXX), STAT=ISTAT )
+      CHECK_ALLOC_STATUS ( ISTAT )
+    ELSE
+      ALLOCATE ( WADATS(IMOD)%XSW8HS(1), STAT=ISTAT )
+      CHECK_ALLOC_STATUS ( ISTAT )
+    END IF
+!
+    IF ( OUTFLAGS( 4, 20) ) THEN
+      ALLOCATE ( WADATS(IMOD)%XWS8TP(NXXX), STAT=ISTAT )
+      CHECK_ALLOC_STATUS ( ISTAT )
+    ELSE
+      ALLOCATE ( WADATS(IMOD)%XWS8TP(1), STAT=ISTAT )
+      CHECK_ALLOC_STATUS ( ISTAT )
+    END IF
+!
+    IF ( OUTFLAGS( 4, 21) ) THEN
+      ALLOCATE ( WADATS(IMOD)%XSW8TP(NXXX), STAT=ISTAT )
+      CHECK_ALLOC_STATUS ( ISTAT )
+    ELSE
+      ALLOCATE ( WADATS(IMOD)%XSW8TP(1), STAT=ISTAT )
+      CHECK_ALLOC_STATUS ( ISTAT )
+    END IF
+!
+    IF ( OUTFLAGS( 4, 22) ) THEN
+      ALLOCATE ( WADATS(IMOD)%XWS8DP(NXXX), STAT=ISTAT )
+      CHECK_ALLOC_STATUS ( ISTAT )
+    ELSE
+      ALLOCATE ( WADATS(IMOD)%XWS8DP(1), STAT=ISTAT )
+      CHECK_ALLOC_STATUS ( ISTAT )
+    END IF
+!
+    IF ( OUTFLAGS( 4, 23) ) THEN
+      ALLOCATE ( WADATS(IMOD)%XSW8DP(NXXX), STAT=ISTAT )
+      CHECK_ALLOC_STATUS ( ISTAT )
+    ELSE
+      ALLOCATE ( WADATS(IMOD)%XSW8DP(1), STAT=ISTAT )
+      CHECK_ALLOC_STATUS ( ISTAT )
+    END IF
+!
     WADATS(IMOD)%XPHS   = UNDEF
     WADATS(IMOD)%XPTP   = UNDEF
     WADATS(IMOD)%XPLP   = UNDEF
@@ -1942,6 +2009,12 @@ CONTAINS
     WADATS(IMOD)%XPT1   = UNDEF
     WADATS(IMOD)%XPT2   = UNDEF
     WADATS(IMOD)%XPEP   = UNDEF
+    WADATS(IMOD)%XWS8HS = UNDEF
+    WADATS(IMOD)%XSW8HS = UNDEF
+    WADATS(IMOD)%XWS8TP = UNDEF
+    WADATS(IMOD)%XSW8TP = UNDEF
+    WADATS(IMOD)%XWS8DP = UNDEF
+    WADATS(IMOD)%XSW8DP = UNDEF
     !
     IF ( OUTFLAGS( 5, 2) ) THEN
       ALLOCATE ( WADATS(IMOD)%XCHARN(NXXX), STAT=ISTAT )
@@ -2620,7 +2693,7 @@ CONTAINS
     !/    13-Jun-2006 : Splitting STORE in G/SSTORE.        ( version 3.09 )
     !/    04-Oct-2006 : Add filter to array pointers.       ( version 3.10 )
     !/    28_Mar-2007 : Add partitioned data arrays.        ( version 3.11 )
-    !/                  Add aditional undefined arrays.
+    !/                  Add additional undefined arrays.
     !/    22-Mar-2021 : Adds TAUA, WNMEAN, TAUOC parameters ( version 7.13 )
     !/
     !  1. Purpose :
@@ -2659,7 +2732,7 @@ CONTAINS
     !
     !  9. Switches :
     !
-    !     !/MPI  Paralllel model environment.
+    !     !/MPI  Parallel model environment.
     !
     !     !/PRn    Propagation scheme selection.
     !
@@ -2847,6 +2920,12 @@ CONTAINS
       PT1    => WADATS(IMOD)%PT1
       PT2    => WADATS(IMOD)%PT2
       PEP    => WADATS(IMOD)%PEP
+      WS8HS  => WADATS(IMOD)%WS8HS
+      SW8HS  => WADATS(IMOD)%SW8HS
+      SW8TP  => WADATS(IMOD)%SW8TP
+      WS8TP  => WADATS(IMOD)%WS8TP
+      SW8DP  => WADATS(IMOD)%SW8DP
+      WS8DP  => WADATS(IMOD)%WS8DP
       !
       CHARN    => WADATS(IMOD)%CHARN
       TWS      => WADATS(IMOD)%TWS
@@ -3186,6 +3265,12 @@ CONTAINS
       PT1    => WADATS(IMOD)%XPT1
       PT2    => WADATS(IMOD)%XPT2
       PEP    => WADATS(IMOD)%XPEP
+      WS8HS  => WADATS(IMOD)%XWS8HS
+      SW8HS  => WADATS(IMOD)%XSW8HS
+      SW8TP  => WADATS(IMOD)%XSW8TP
+      WS8TP  => WADATS(IMOD)%XWS8TP
+      SW8DP  => WADATS(IMOD)%XSW8DP
+      WS8DP  => WADATS(IMOD)%XWS8DP
       !
       CHARN    => WADATS(IMOD)%XCHARN
       TWS      => WADATS(IMOD)%XTWS

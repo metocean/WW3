@@ -112,7 +112,7 @@ MODULE W3ODATMD
   !      NAPPRT    Int.  Public   Proc. dealing with partition output.
   !      NOSWLL    I.P.  Public   Number of swell fields from part.
   !                               to be used in field output.
-  !      TOSNL5    I.A.  Public   Times for point ouput (!/NL5)
+  !      TOSNL5    I.A.  Public   Times for point output (!/NL5)
   !      TOFRST    I.A.  Public   Times for first output.
   !      TONEXT    I.A.  Public   Times for next output.
   !      TOLAST    I.A.  Public   Times for last output.
@@ -321,7 +321,7 @@ MODULE W3ODATMD
   INTEGER                 :: NOUTP = -1, IOUTP = -1, IOSTYP = 1
   !
   INTEGER, PARAMETER      :: NOGRP = 10
-  INTEGER, PARAMETER      :: NGRPP = 20
+  INTEGER, PARAMETER      :: NGRPP = 25
   INTEGER, PARAMETER      :: DIMP = 15
   INTEGER                 :: NOGE(NOGRP)
   INTEGER                 :: NOTYPE
@@ -395,8 +395,8 @@ MODULE W3ODATMD
   END TYPE OTYPE4
   !/
   TYPE OTYPE5
-    INTEGER               :: NBI, NBI2, NFBPO, NBO(0:9),          &
-         NBO2(0:9), NDSL(9), NKI, NTHI
+    INTEGER               :: NBI, NBI2, NFBPO, NBO(0:99),          &
+         NBO2(0:99), NDSL(99), NKI, NTHI
 #ifdef W3_MPI
     INTEGER               :: NRQBP = 0, NRQBP2 = 0
 #endif
@@ -451,7 +451,7 @@ MODULE W3ODATMD
   !/
   TYPE(OUTPUT), TARGET, ALLOCATABLE :: OUTPTS(:)
   !/
-  !/ Data aliasses for structure OUTPUT
+  !/ Data aliases for structure OUTPUT
   !/
   INTEGER, POINTER        :: NDSO, NDSE, NDST, SCREEN
   INTEGER, POINTER        :: NTPROC, NAPROC, IAPROC, NAPLOG,      &
@@ -467,7 +467,7 @@ MODULE W3ODATMD
   REAL, POINTER           :: DTOUT(:)
   LOGICAL, POINTER        :: FLOUT(:)
   !/
-  !/ Data aliasses for substructures for output types
+  !/ Data aliases for substructures for output types
   !/ Type 1 ...
   !/
   INTEGER, POINTER        :: IPASS1
@@ -816,7 +816,7 @@ CONTAINS
     !
     ! 4) Spectral Partitions parameters
     !
-    NOGE(4) = 17
+    NOGE(4) = 23
     !
     IDOUT( 4, 1)  = 'Part. wave height   '
     IDOUT( 4, 2)  = 'Part. peak period   '
@@ -835,6 +835,12 @@ CONTAINS
     IDOUT( 4,15)  = 'Part. peak density  '
     IDOUT( 4,16)  = 'Total wind sea frac.'
     IDOUT( 4,17)  = 'Number of partitions'
+    IDOUT( 4,18)  = '8s sea wave height  '
+    IDOUT( 4,19)  = '8s swell wave height'
+    IDOUT( 4,20)  = '8s sea peak period  '
+    IDOUT( 4,21)  = '8s swell peak period'
+    IDOUT( 4,22)  = '8s sea peak dir     '
+    IDOUT( 4,23)  = '8s swell peak dir   '
     !
     ! 5) Atmosphere-waves layer
     !
@@ -851,7 +857,7 @@ CONTAINS
     IDOUT( 5, 9)  = 'Mean breaking height'
     IDOUT( 5,10)  = 'Dominant break prob '
     IDOUT( 5,11)  = 'Wind sea period' ! C.Bunney - reinstated this as is used in ww3_ounf
-    ! Is it suposed to be defunct? It is not in ww3_outf...
+    ! Is it supposed to be defunct? It is not in ww3_outf...
     !
     ! 6) Wave-ocean layer
     !
@@ -1534,7 +1540,7 @@ CONTAINS
     !/    17-May-2007 : Adding NTPROC/NAPROC separation.    ( version 3.11 )
     !/    27-Jul-2010 : Add NKI, NTHI, XFRI, FR1I, TH1I.    ( version 3.14.3 )
     !/    19-Dec-2012 : Move NOSWLL to data structure.      ( version 4.11 )
-    !/    12-Dec-2014 : Modify instanciation of NRQTR       ( version 5.04 )
+    !/    12-Dec-2014 : Modify instantiation of NRQTR       ( version 5.04 )
     !/    25-Sep-2020 : Flags for coupling restart          ( version 7.10 )
     !/
     !  1. Purpose :

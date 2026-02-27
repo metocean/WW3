@@ -192,7 +192,8 @@ PROGRAM W3OUNF
        CFLTHMAX, CFLXYMAX, CFLKMAX, TAUICE, PHICE,  &
        STMAXE, STMAXD, HMAXE, HCMAXE, HMAXD, HCMAXD,&
        P2SMS, EF, US3D, TH1M, STH1M, TH2M, STH2M,   &
-       WN, USSP, WBT, WNMEAN
+       WN, USSP, WBT, WNMEAN, WS8HS, SW8HS, SW8TP,  &
+       SW8DP, WS8TP, WS8DP
   USE W3ODATMD, ONLY: NDSO, NDSE, SCREEN, NOGRP, NGRPP, IDOUT,     &
        UNDEF, FLOGRD, FNMPRE, NOSWLL, NOGE
   !
@@ -238,12 +239,13 @@ PROGRAM W3OUNF
   !
   REAL                    :: DTREQ, DTEST
   !
-  CHARACTER*30            :: STRSTOPDATE, FILEPREFIX, STRINGIPART
+  CHARACTER*30            :: STRSTOPDATE, FILEPREFIX, STRINGIPART, &
+                             IPARTNAME
   CHARACTER*1024          :: FLDOUT
   CHARACTER               :: COMSTR*1, IDTIME*23, IDDDAY*11, TTYPE*1
   !
   LOGICAL                 :: FLG2D(NOGRP,NGRPP), FLG1D(NOGRP),     &
-       VECTOR, TOGETHER, FLGNML, FLGFC
+       VECTOR, TOGETHER, FLGNML, FLGFC, SINGLEFILE
   LOGICAL                 :: MAPSTAOUT = .TRUE.
   LOGICAL                 :: SMCGRD = .FALSE.
 #ifdef W3_RTD
@@ -422,7 +424,7 @@ PROGRAM W3OUNF
     FILEPREFIX= 'ww3.'
     READ (NDSI,*,END=801,ERR=802) FILEPREFIX
     CALL NEXTLN ( COMSTR , NDSI , NDSE )
-    READ (NDSI,*,END=801,ERR=802) S3
+    READ (NDSI,*,END=801,ERR=802) S3, SINGLEFILE
     CALL NEXTLN ( COMSTR , NDSI , NDSE )
 
     IF(SMCGRD) THEN
@@ -812,7 +814,7 @@ PROGRAM W3OUNF
        '     GOT: ',A /)
   !
 1015 FORMAT (/' *** WAVEWATCH III ERROR IN W3OUNF : '/               &
-       '     CANNONT HAVE TIME UNITS OF DAYS WITH'/           &
+       '     CANNOT HAVE TIME UNITS OF DAYS WITH'/           &
        '     TIME VARYTPE OF INT64' /)
   !
 1016 FORMAT (/' *** WAVEWATCH III ERROR IN W3OUNF : '/               &
@@ -1023,6 +1025,7 @@ CONTAINS
     CHARACTER               :: FNAMENC*128,                           &
          FORMF*11
     CHARACTER, SAVE         :: OLDTIMEID*16 = '0000000000000000'
+    CHARACTER, SAVE         :: FIRSTTIME*16 = '0000000000000000'
     CHARACTER, SAVE         :: TIMEID*16 = '0000000000000000'
     !
     LOGICAL                 :: FLFRQ, FLDIR, FEXIST, FREMOVE
@@ -1128,10 +1131,10 @@ CONTAINS
       TIMEID="field"
       ! if S3=>YYYYMMDDHH then filetime='YYYYMMDDTHHZ'
     ELSE IF (S3.EQ.10) THEN
-      S4=S4+2 ! add chars for ISO8601 : day T hours Z
-      WRITE(FORMAT1,'(A,I1,A,I1,A)') '(I8.8,A1,I',S5,'.',S5,',A1)'
+      S4=S4+1 ! add chars for ISO8601 : day T hours Z
+      WRITE(FORMAT1,'(A,I1,A,I1,A)') '(I8.8,A1,I',S5,'.',S5,')'
       WRITE (TIMEID,FORMAT1) TIME(1), 'T', &
-           FLOOR(REAL(TIME(2))/NINT(10.**(6-S5))), 'Z'
+           FLOOR(REAL(TIME(2))/NINT(10.**(6-S5)))
       ! if S3=>YYYYMMDD then filetime='YYYYMMDD'
     ELSE IF (S3.EQ.8) THEN
       WRITE(FORMAT1,'(A,I1,A,I1,A)') '(I',S3,'.',S3,')'
@@ -1146,14 +1149,19 @@ CONTAINS
     S1=LEN_TRIM(FILEPREFIX)
     FNAMENC=''
     FNAMENC(1:S1)=FILEPREFIX(1:S1)
-    FNAMENC(S1+1:S1+S4) = TIMEID(1:S4)
-
+    ! Added logic for file output
+    IF (SINGLEFILE) THEN
+      IF (FIRSTTIME.eq.'0000000000000000') FIRSTTIME=TIMEID
+      FNAMENC(S1+1:S1+S4) = FIRSTTIME
+    ELSE
+      FNAMENC(S1+1:S1+S4) = TIMEID(1:S4)
+    END IF
     !
 #ifdef W3_SMC
     !
     !---  Update MAPSMC for SMC type 2 output. This needs to be
     !     done at each timestep as MAPSTA could change if there
-    !     are water level or ice input chagnes.
+    !     are water level or ice input changes.
     !
     IF( SMCGRD .AND. (SMCOTYPE .EQ. 2) ) CALL MAPSTA_SMC()
 #endif
@@ -1162,7 +1170,7 @@ CONTAINS
     ! 2.  Loop over output fields.
     !
 
-    ! Instanciates the field and group indexes
+    ! Instantiates the field and group indexes
     I1=0
     J1=0
     !
@@ -1170,7 +1178,7 @@ CONTAINS
       DO IFJ=1, NGRPP
         ! If the flag for the variable IFI of the group IFJ is .TRUE.
         IF ( FLG2D(IFI,IFJ) ) THEN
-          ! Instanciates the partition array
+          ! Instantiates the partition array
           INDEXIPART=1
           IPART=TABIPART(INDEXIPART)
           NFIELD=1 ! Default is one field
@@ -1178,7 +1186,15 @@ CONTAINS
 
           !  Loop over IPART for partition variables
 555       CONTINUE
-
+!
+          IF (IPART.EQ.0) IPARTNAME='wind'
+          IF (IPART.EQ.1) IPARTNAME='primary_swell'
+          IF (IPART.EQ.2) IPARTNAME='secondary_swell'
+          IF (IPART.EQ.3) IPARTNAME='tertiary_swell'
+          IF (IPART.EQ.4) IPARTNAME='quaternary_swell'
+          IF (IPART.EQ.5) IPARTNAME='quinary_swell'
+          ! write(*,*) IPART, IPARTNAME
+!
           ! Initializes the index of field and group at the first flag FLG2D at .TRUE.
           IF (I1.EQ.0) I1=IFI
           IF (J1.EQ.0) J1=IFJ
@@ -1554,6 +1570,30 @@ CONTAINS
           ELSE IF ( IFI .EQ. 4 .AND. IFJ .EQ. 17 ) THEN
             CALL S2GRID(PNR(:), X1)
             !
+            ! 8s SEA HS
+          ELSE IF ( IFI .EQ. 4 .AND. IFJ .EQ. 18 ) THEN
+            CALL S2GRID(WS8HS(:), X1)
+            !
+            ! 8s SWELL HS
+          ELSE IF ( IFI .EQ. 4 .AND. IFJ .EQ. 19 ) THEN
+            CALL S2GRID(SW8HS(:), X1)
+            !
+            ! 8s SEA TP
+          ELSE IF ( IFI .EQ. 4 .AND. IFJ .EQ. 20 ) THEN
+            CALL S2GRID(WS8TP(:), X1)
+            !
+            ! 8s SWELL TP
+          ELSE IF ( IFI .EQ. 4 .AND. IFJ .EQ. 21 ) THEN
+            CALL S2GRID(SW8TP(:), X1)
+            !
+            ! 8s SEA DP
+          ELSE IF ( IFI .EQ. 4 .AND. IFJ .EQ. 22 ) THEN
+            CALL S2GRID(WS8DP(:), X1)
+            !
+            ! 8s SWELL DP
+          ELSE IF ( IFI .EQ. 4 .AND. IFJ .EQ. 23 ) THEN
+            CALL S2GRID(SW8DP(:), X1)
+            !
             ! Friction velocity
           ELSE IF ( IFI .EQ. 5 .AND. IFJ .EQ. 1 ) THEN
             !! Note - UST and USTDIR read in from .ww3 file are X-Y vectors
@@ -1682,7 +1722,7 @@ CONTAINS
             CALL S2GRID(TAUOY(1:NSEA), XY)
             NFIELD=2
             !
-            ! Radiation pressure (Bernouilli Head)
+            ! Radiation pressure (Bernoulli Head)
           ELSE IF ( IFI .EQ. 6 .AND. IFJ .EQ. 3 ) THEN
             CALL S2GRID(BHD(1:NSEA), X1)
             !
@@ -2094,12 +2134,14 @@ CONTAINS
           INQUIRE(FILE=FNAMENC, EXIST=FEXIST)
           IF (FEXIST) THEN
             FREMOVE = .FALSE.
-            ! time splitted condition
-            IF (INDEX(TIMEID,OLDTIMEID).EQ.0) THEN
-              ! all variables in the samefile
-              IF (TOGETHER.AND.(.NOT.FLFRQ).AND.NCID.EQ.0) FREMOVE = .TRUE.
-              ! a file per variable
-              IF (.NOT.TOGETHER.OR.FLFRQ) FREMOVE = .TRUE.
+            ! time split condition
+            IF (.NOT.SINGLEFILE) THEN
+              IF (INDEX(TIMEID,OLDTIMEID).EQ.0) THEN
+                ! all variables in the samefile
+                IF (TOGETHER.AND.(.NOT.FLFRQ).AND.NCID.EQ.0) FREMOVE = .TRUE.
+                ! a file per variable
+                IF (.NOT.TOGETHER.OR.FLFRQ) FREMOVE = .TRUE.
+              END IF
             END IF
 
             IF (FREMOVE) THEN
@@ -2163,7 +2205,7 @@ CONTAINS
               NCIDS(IFI,IFJ,IPART+1)=NCID
             END IF
 
-            ! If curvilinear grid, instanciates lat / lon
+            ! If curvilinear grid, instantiates lat / lon
             IF (GTYPE.EQ.CLGTYPE) THEN
               IF (.NOT.ALLOCATED(LON2D)) ALLOCATE(LON2D(NX,NY),LAT2D(NX,NY))
               LON2D=TRANSPOSE(XGRD)
@@ -2218,7 +2260,7 @@ CONTAINS
                 ENDIF
 #endif
               ELSE ! SMCGRD
-                ! instanciates lon with x/lon for regular grid or nodes for unstructured mesh
+                ! instantiates lon with x/lon for regular grid or nodes for unstructured mesh
                 IF (.NOT.ALLOCATED(LON)) ALLOCATE(LON(NX))
 #ifdef W3_RTD
                 ! 2d longitude array for standard grid coordinates
@@ -2226,7 +2268,7 @@ CONTAINS
                      ALLOCATE(LON2D(NX,NY),LON2DEQ(NX,NY),ANGLD2D(NX,NY))
 #endif
                 IF (.NOT.ALLOCATED(LAT)) THEN
-                  ! If regular grid, instanciates lat with y/lat
+                  ! If regular grid, instantiates lat with y/lat
                   IF (GTYPE.EQ.RLGTYPE) THEN
                     ALLOCATE(LAT(NY))
 #ifdef W3_RTD
@@ -2234,7 +2276,7 @@ CONTAINS
                     IF ( RTDL .AND. .NOT.ALLOCATED(LAT2D)) &
                          ALLOCATE(LAT2D(NX,NY),LAT2DEQ(NX,NY))
 #endif
-                    ! If unstructured mesh, instanciates lat with nodes
+                    ! If unstructured mesh, instantiates lat with nodes
                   ELSE
                     ALLOCATE(LAT(NX))
                   END IF
@@ -3379,7 +3421,7 @@ CONTAINS
           ! ChrisBunney: Don't loop IPART for last two entries in section 4
           ! (16: total wind sea fraction, 17: number of parts) as these fields
           ! do not have partitions.
-          IF (IFI .EQ. 4 .AND. IFJ .LE. NOGE(IFI) - 2) THEN
+          IF (IFI .EQ. 4 .AND. IFJ .LE. NOGE(IFI) - 8) THEN
 560         CONTINUE
             IF (INDEXIPART.LT.NBIPART) THEN
               INDEXIPART=INDEXIPART+1
@@ -3869,16 +3911,16 @@ CONTAINS
       CALL CHECK_ERR(IRET)
     END IF
     !
-    ! Optional (user-defined) coordinate reference system (scalar variable)
-    !
-    IF(CRS_META%N .GT. 0) THEN
-      IRET = NF90_DEF_VAR(NCID, CRS_NAME, NF90_CHAR, varid=IVAR)
-      CALL CHECK_ERR(IRET)
+    ! ! Optional (user-defined) coordinate reference system (scalar variable)
+    ! !
+    ! IF(CRS_META%N .GT. 0) THEN
+    !   IRET = NF90_DEF_VAR(NCID, CRS_NAME, NF90_CHAR, varid=IVAR)
+    !   CALL CHECK_ERR(IRET)
 
-      !CALL WRITE_FREEFORM_META(NCID, IVAR, CRS_META, N_CRSMETA, IERR)
-      CALL WRITE_FREEFORM_META_LIST(NCID, IVAR, CRS_META, IERR)
-      CALL CHECK_ERR(IRET)
-    ENDIF
+    !   !CALL WRITE_FREEFORM_META(NCID, IVAR, CRS_META, N_CRSMETA, IERR)
+    !   CALL WRITE_FREEFORM_META_LIST(NCID, IVAR, CRS_META, IERR)
+    !   CALL CHECK_ERR(IRET)
+    ! ENDIF
     !
     ! Global attributes
     !

@@ -242,7 +242,7 @@ PROGRAM W3PRNC
        NDSI, NDSM, NDSDAT, NDSTRC, NTRACE,  &
        IERR, IFLD, ITYPE, J, NFCOMP,        &
        IX, IY, JX, NXI, NYI, NDAT, JJ,      &
-       NDSLL, IDLALL, IDFMLL, NCID, IRET,   &
+       NDSLL, IDLALL, IDFMLL, NCID, IRET, IRET2,   &
        MXM, MYM, DATTYP, RECLDT, IDAT,      &
        NDIMSGRID, NDIMSVAR, VARIDTMP,       &
        NUMDIMS, I, ITIME
@@ -790,7 +790,7 @@ PROGRAM W3PRNC
   IRET=NF90_OPEN(PATH=TRIM(FNMPRE)//NAMEF,MODE=NF90_NOWRITE,NCID=NCID)
   CALL CHECK_ERR(IRET)
 
-  ! instanciates time
+  ! instantiates time
   REFDATE(:)=0.
   IRET=NF90_INQ_VARID(NCID,"time",VARIDTMP)
   IF ( IRET/=NF90_NOERR ) IRET=NF90_INQ_VARID(NCID,"MT",VARIDTMP)
@@ -821,12 +821,15 @@ PROGRAM W3PRNC
     END DO
     IRET=NF90_GET_ATT(NCID,VARIDF(I),"_FillValue", FILLVALUE)
     IF ( IRET/=NF90_NOERR ) THEN
-      WRITE(NDSE,1027) TRIM(FIELDSNAME(I))
-      CALL EXTCDE ( 27 )
+      IRET2=NF90_GET_ATT(NCID,VARIDF(I),"missing_value", FILLVALUE)
+      IF ( IRET2/=NF90_NOERR ) THEN
+        WRITE(NDSE,1027) TRIM(FIELDSNAME(I))
+        CALL EXTCDE ( 27 )
+      END IF
     END IF
   END DO
 
-  ! instanciates generic variables dimensions
+  ! instantiates generic variables dimensions
   NXI=0
   NYI=0
   NDIMSGRID=2
