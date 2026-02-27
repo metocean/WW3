@@ -119,9 +119,6 @@
   progs="$progs ww3_multi_esmf  ww3_uprstr"
   progs="$progs libww3"
   progs="$progs libww3.so"
-  
-  # Custom programs for Metocean Solutions
-  progs="$progs ww3_prnc_sea ww3_swanbnd"
 
   for prog in $progs
   do
@@ -154,8 +151,6 @@
       gx_outf) IDstring='GrADS input file generation (gridded fields)' ;;
       gx_outp) IDstring='GrADS input file generation for point output' ;;
       ww3_systrk) IDstring='Wave system tracking postprocessor' ;;
-      ww3_prnc_sea) IDstring='NetCDF field preprocessor for sea conditions (Metocean)' ;;
-      ww3_swanbnd) IDstring='SWAN boundary conditions generator (Metocean)' ;;
       libww3) IDstring='Object file archive' ;;
       libww3.so) IDstring='Object file archive' ;;
       ww3_uprstr) IDstring='Update Restart File' ;;
