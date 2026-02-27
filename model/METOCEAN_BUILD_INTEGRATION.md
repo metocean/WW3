@@ -8,12 +8,19 @@ Integrated `ww3_prnc_sea` and `ww3_swanbnd` into WW3's native build system so th
 
 ### 1. [model/bin/cmplr.env](file:///source/WW3/model/bin/cmplr.env)
 
-**Intel oneAPI Compiler Support:** Updated `comp_seq` from `ifort` to `ifx` in:
-- **Line 56:** MPT compiler section - `comp_seq='ifx'`
-- **Line 135:** Intel compiler section - `comp_seq='ifx'`
-- **Line 145:** Cheyenne-specific configuration - `comp_seq='ifx'`
+**Intel oneAPI Compiler Support:** Updated for `ifx` compatibility:
 
-This ensures compatibility with Intel oneAPI compilers, which use `ifx` (Intel Fortran Compiler) instead of the legacy `ifort`.
+**Compiler executables (Lines 56, 135, 145):**
+- Changed `comp_seq` from `ifort` to `ifx`
+- Ensures WW3 uses Intel oneAPI Fortran compiler
+
+**Compiler flags (Lines 69, 153):** Removed `ifx`-incompatible flags:
+- Removed `-ip` (interprocedural optimization - not supported in ifx)
+- Removed `-fno-fnalias` (function aliasing - not supported in ifx)
+- Removed `-sox` (save diagnostics - not supported in ifx)
+- Changed `-openmp` to `-qopenmp` (Intel oneAPI standard)
+
+**Result:** Clean compilation with no warnings when using Intel oneAPI compilers.
 
 ### 2. [model/bin/make_makefile.sh](file:///source/WW3/model/bin/make_makefile.sh)
 
