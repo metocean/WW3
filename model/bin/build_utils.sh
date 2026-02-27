@@ -1016,6 +1016,20 @@ create_file_list()
                 IO='w3iogrmd w3iogomd w3iorsmd'
                aux="constants w3servmd w3timemd w3arrymd w3dispmd w3gsrumd"
                aux="$aux w3parall w3nmluprstrmd" ;;
+      ww3_prnc_sea)
+              core=
+              data=
+              prop=
+           sourcet=
+                IO=
+               aux= ;;
+      ww3_swanbnd)
+              core=
+              data=
+              prop=
+           sourcet=
+                IO=
+               aux= ;;
     esac
 
     # if esmf is included in program name or if

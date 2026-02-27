@@ -117,6 +117,7 @@
          ww3_outf ww3_outp ww3_trck ww3_trnc ww3_grib gx_outf gx_outp ww3_ounf
          ww3_ounp ww3_gspl ww3_gint ww3_bound ww3_bounc ww3_systrk $tideprog"
   progs="$progs ww3_multi_esmf  ww3_uprstr"
+  progs="$progs ww3_prnc_sea ww3_swanbnd"
   progs="$progs libww3"
   progs="$progs libww3.so"
 
@@ -151,6 +152,8 @@
       gx_outf) IDstring='GrADS input file generation (gridded fields)' ;;
       gx_outp) IDstring='GrADS input file generation for point output' ;;
       ww3_systrk) IDstring='Wave system tracking postprocessor' ;;
+      ww3_prnc_sea) IDstring='NetCDF field preprocessor for SMC grids' ;;
+      ww3_swanbnd) IDstring='SWAN boundary conditions generator' ;;
       libww3) IDstring='Object file archive' ;;
       libww3.so) IDstring='Object file archive' ;;
       ww3_uprstr) IDstring='Update Restart File' ;;
