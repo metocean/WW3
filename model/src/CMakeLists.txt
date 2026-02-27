@@ -202,6 +202,19 @@ foreach(program ${programs})
   target_link_libraries(${program} PRIVATE ww3_lib)
 endforeach()
 
+# Custom MetOcean programs with non-standard file extensions
+if("SMC" IN_LIST switches)
+  add_executable(ww3_prnc_sea ww3_prnc_sea.f90)
+  target_link_libraries(ww3_prnc_sea PRIVATE ww3_lib)
+  find_package(CURL REQUIRED)
+  target_link_libraries(ww3_prnc_sea PRIVATE CURL::libcurl)
+  list(APPEND programs ww3_prnc_sea)
+endif()
+
+add_executable(ww3_swanbnd ww3_swanbnd.f)
+target_link_libraries(ww3_swanbnd PRIVATE ww3_lib)
+list(APPEND programs ww3_swanbnd)
+
 install(
   TARGETS ${programs} ww3_lib
   EXPORT WW3Exports
