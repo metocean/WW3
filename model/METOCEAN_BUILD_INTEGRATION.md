@@ -2,11 +2,20 @@
 
 ## Summary
 
-Integrated `ww3_prnc_sea` and `ww3_swanbnd` into WW3's native build system so they can be built with `w3_make` instead of manual `ifx` compiler calls.
+Integrated `ww3_prnc_sea` and `ww3_swanbnd` into WW3's native build system so they can be built with `w3_make` instead of manual `ifx` compiler calls. Also updated compiler configuration for Intel oneAPI compatibility.
 
 ## Changes Made
 
-### 1. [model/bin/make_makefile.sh](file:///source/WW3/model/bin/make_makefile.sh)
+### 1. [model/bin/cmplr.env](file:///source/WW3/model/bin/cmplr.env)
+
+**Intel oneAPI Compiler Support:** Updated `comp_seq` from `ifort` to `ifx` in:
+- **Line 56:** MPT compiler section - `comp_seq='ifx'`
+- **Line 135:** Intel compiler section - `comp_seq='ifx'`
+- **Line 145:** Cheyenne-specific configuration - `comp_seq='ifx'`
+
+This ensures compatibility with Intel oneAPI compilers, which use `ifx` (Intel Fortran Compiler) instead of the legacy `ifort`.
+
+### 2. [model/bin/make_makefile.sh](file:///source/WW3/model/bin/make_makefile.sh)
 
 **Line 117:** Added custom programs to the build list
 ```bash
@@ -19,7 +28,7 @@ ww3_prnc_sea) IDstring='NetCDF field preprocessor for SMC grids' ;;
 ww3_swanbnd) IDstring='SWAN boundary conditions generator' ;;
 ```
 
-### 2. [model/bin/build_utils.sh](file:///source/WW3/model/bin/build_utils.sh)
+### 3. [model/bin/build_utils.sh](file:///source/WW3/model/bin/build_utils.sh)
 
 **Lines 1019-1030:** Added dependency definitions for standalone programs
 ```bash
@@ -41,7 +50,7 @@ ww3_swanbnd)
 
 These empty dependency lists indicate standalone programs with no WW3 module dependencies.
 
-### 3. [model/bin/link](file:///source/WW3/model/bin/link)
+### 4. [model/bin/link](file:///source/WW3/model/bin/link)
 
 **Lines 122-125:** Added curl library for ww3_prnc_sea
 ```bash
