@@ -584,7 +584,7 @@ MODULE W3GRIDMD
        IDX, IXO, IDY, IYO, IBA, NBA, ILOOP, &
        IFL, NBOTOT, NPO, IP, IX1, IX2, IY1, &
        IY2, J, JJ, IXR(4), IYR(4), ISEAI(4),&
-       IST, NKI, NTHI, NRIC, NRIS, I, IDFT, &
+        IST, NKI, NTHI, NRIC, NRIS, I, INML, IDFT, &
        NSTAT, NBT, NLAND, NOSW, NMAPB, IMAPB
   INTEGER                 :: k, bnd_sea_count, thres_sea_count,   &
                              N_SEA, num_DI1, num_DI2
@@ -5575,7 +5575,7 @@ RGLGRD = .TRUE.
       !
       IF ( ILOOP.EQ.2 ) CALL W3DMO5 ( 1, NDST, NDSE, 2 )
       !
-      I = 1
+      INML = 1
       NBOTOT = 0
       NFBPO  = 0
       NBO(0) = 0
@@ -5593,13 +5593,13 @@ RGLGRD = .TRUE.
       DO
         IF (FLGNML) THEN
           ! outbound lines
-          IF (NML_OUTBND_COUNT%N_LINE.GT.0 .AND. I.LE.NML_OUTBND_COUNT%N_LINE) THEN
-            XO0 = NML_OUTBND_LINE(I)%X0
-            YO0 = NML_OUTBND_LINE(I)%Y0
-            DXO = NML_OUTBND_LINE(I)%DX
-            DYO = NML_OUTBND_LINE(I)%DY
-            NPO = NML_OUTBND_LINE(I)%NP
-            I=I+1
+          IF (NML_OUTBND_COUNT%N_LINE.GT.0 .AND. INML.LE.NML_OUTBND_COUNT%N_LINE) THEN
+            XO0 = NML_OUTBND_LINE(INML)%X0
+            YO0 = NML_OUTBND_LINE(INML)%Y0
+            DXO = NML_OUTBND_LINE(INML)%DX
+            DYO = NML_OUTBND_LINE(INML)%DY
+            NPO = NML_OUTBND_LINE(INML)%NP
+            INML=INML+1
           ELSE
             NPO=0
           END IF

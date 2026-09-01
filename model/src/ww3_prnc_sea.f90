@@ -56,7 +56,11 @@ program ww3_prnc_sea
                                out_nseaID, out_uID, out_vID
       REAL, ALLOCATABLE    ::  cn_lons(:), cn_lats(:)
       INTEGER,DIMENSION(2) ::  arrdims
-      LOGICAL              ::  debug
+      LOGICAL              ::  debug, flgnml
+
+      NAMELIST /PRNC_SEA_NML/ ww3_field_id, file_in, nlons, nlats, ntimes, &
+                               startdate, starttime, dt, nx, ny, smc_cell_file, &
+                               smc_lon0, smc_lat0, smc_dx, smc_dy, interp_method
 
 
       filler(:)=0
@@ -70,47 +74,53 @@ program ww3_prnc_sea
       is_there_neg_lons=.FALSE.
       debug = .TRUE.
 
-      ! Open ww3_prnc_sea.inp
-      OPEN( unit=unit_inp, file='ww3_prnc_sea.inp', status="old", &
-            form="formatted", iostat=err )
-      IF( err .NE. 0 ) THEN
-            PRINT*,"[ERROR] Failed to open file ww3_prnc_sea.inp"
-            PRINT*,"[ERROR] IOERROR: ", err
-            EXTCDE = 2
-            CALL EXIT(EXTCDE)
+      INQUIRE(file='ww3_prnc_sea.nml', exist=flgnml)
+      IF (flgnml) THEN
+            OPEN(newunit=unit_inp, file='ww3_prnc_sea.nml', status='old', &
+                 action='read', form='formatted', iostat=err)
+            IF (err .NE. 0) THEN
+                  PRINT*, '[ERROR] Failed to open file ww3_prnc_sea.nml'
+                  PRINT*, '[ERROR] IOERROR: ', err
+                  CALL EXIT(2)
+            ENDIF
+            READ(unit_inp, nml=PRNC_SEA_NML, iostat=err)
+            IF (err .NE. 0) THEN
+                  PRINT*, '[ERROR] Failed to read PRNC_SEA_NML'
+                  PRINT*, '[ERROR] IOERROR: ', err
+                  CALL EXIT(2)
+            ENDIF
+      ELSE
+            OPEN(newunit=unit_inp, file='ww3_prnc_sea.inp', status='old', &
+                 action='read', form='formatted', iostat=err)
+            IF (err .NE. 0) THEN
+                  PRINT*, '[ERROR] Failed to open file ww3_prnc_sea.inp'
+                  PRINT*, '[ERROR] IOERROR: ', err
+                  CALL EXIT(2)
+            ENDIF
+
+            READ(unit_inp,*,iostat=err) ww3_field_id
+            READ(unit_inp,'(A)',iostat=err) file_in
+            READ(unit_inp,*,iostat=err) nlons, nlats, ntimes
+            READ(unit_inp,*,iostat=err) startdate, starttime, dt
+            READ(unit_inp,*,iostat=err) nx, ny
+            READ(unit_inp,'(A)',iostat=err) smc_cell_file
+            READ(unit_inp,*,iostat=err) smc_lon0, smc_lat0
+            READ(unit_inp,*,iostat=err) smc_dx, smc_dy
+            READ(unit_inp,*,iostat=err) interp_method
       ENDIF
 
-      ! Read parameters
-      READ( unit_inp,*,iostat=err ) ww3_field_id
       ww3_field_id = TRIM(ww3_field_id)
       WRITE(*,*) 'ww3_field_id = ', ww3_field_id
-      READ( unit_inp,'(A)',iostat=err ) file_in
       file_in = TRIM(file_in)
       WRITE(*,*) 'file_in = ', file_in
-      READ( unit_inp,*,iostat=err ) nlons, nlats, ntimes
-      nlons = nlons
-      nlats = nlats
-      ntimes = ntimes
       WRITE(*,*) 'nlons, nlats, ntimes = ', nlons, nlats, ntimes
-      READ( unit_inp,*,iostat=err ) startdate, starttime, dt
       dt = dt*3600
       WRITE(*,*) 'startdate, starttime, dt = ', startdate, starttime, dt
-      READ( unit_inp,*,iostat=err ) nx, ny
-      nx = nx
-      ny = ny
       WRITE(*,*) 'nx, ny = ', nx, ny
-      READ( unit_inp,'(A)',iostat=err ) smc_cell_file
       smc_cell_file = TRIM(smc_cell_file)
       WRITE(*,*) 'smc_cell_file = ', smc_cell_file
-      READ( unit_inp,*,iostat=err ) smc_lon0, smc_lat0
-      smc_lon0 = smc_lon0
-      smc_lat0 = smc_lat0
       WRITE(*,*) 'smc_lon0, smc_lat0 = ', smc_lon0, smc_lat0
-      READ( unit_inp,*,iostat=err ) smc_dx, smc_dy
-      smc_dx = smc_dx
-      smc_dy = smc_dy
       WRITE(*,*) 'smc_dx, smc_dy = ', smc_dx, smc_dy
-      READ( unit_inp,*,iostat=err ) interp_method
       interp_method = TRIM(interp_method)
       WRITE(*,*) 'interp_method = ', interp_method
       CLOSE( unit_inp )
